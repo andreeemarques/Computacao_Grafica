@@ -40,7 +40,7 @@ var mesh = new THREE.Mesh(geometria, material);
 //mesh.translateX(0.5);
 //mesh.translateY(0.5);
 
-//mesh.scale.set(0.25,0.25,0.25);
+
 
 mesh.translateZ(-6.0);
 
