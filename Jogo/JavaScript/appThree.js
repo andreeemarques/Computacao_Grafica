@@ -28,7 +28,7 @@ document.addEventListener('click', function() {
 
 // Variáveis para câmera de 3ª pessoa
 var cameraDistance = 10;
-var cameraHeight = 5;
+var cameraHeight = 1; // nível do ombro do jogador
 var cameraAngle = 0; // em radianos
 var cameraPitch = 0; // em radianos
 
@@ -117,6 +117,10 @@ function iniciar() {
 }
 
 function loop() {
+
+    // Orientar o jogador para a câmera (apenas horizontal)
+    var target = new THREE.Vector3(camara.position.x, meshJogador.position.y, camara.position.z);
+    meshJogador.lookAt(target);
     // Atualizar câmera
     updateCamera();
     
