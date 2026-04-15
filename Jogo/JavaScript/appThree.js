@@ -1,129 +1,248 @@
 import * as THREE from 'three';
 import { PointerLockControls } from 'PointerLockControls';
 
-document.addEventListener('DOMContentLoaded', iniciar);
+// ─────────────────────────────────────────────
+// Jogador
+// ─────────────────────────────────────────────
+class Jogador {
+    constructor(cena) {
+        const geometria = new THREE.BoxGeometry(1, 1, 1);
+        const textura   = new THREE.TextureLoader().load('./Imagens/boxImage.jpg');
+        const material  = new THREE.MeshStandardMaterial({ map: textura });
 
-var cena     = new THREE.Scene();
-var renderer = new THREE.WebGLRenderer();
-var camara   = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 200);
-var controls = new PointerLockControls(camara, renderer.domElement);
+        this.mesh = new THREE.Mesh(geometria, material);
+        this.mesh.position.set(0, 0.5, 0);
+        this.mesh.castShadow    = true;
+        this.mesh.receiveShadow = true;
 
-controls.addEventListener('lock', function() {
-    document.addEventListener('mousemove', onMouseMove, false);
-});
+        cena.add(this.mesh);
+    }
 
-controls.addEventListener('unlock', function() {
-    document.removeEventListener('mousemove', onMouseMove, false);
-});
+    mover(cameraAngle, tecla) {
+        const forward = new THREE.Vector3(-Math.sin(cameraAngle), 0, -Math.cos(cameraAngle));
+        const right   = new THREE.Vector3(-Math.cos(cameraAngle), 0,  Math.sin(cameraAngle));
+        const passo   = 0.25;
+ 
+        if (tecla === 87) this.mesh.position.add(forward.clone().multiplyScalar(passo));   // W
+        if (tecla === 83) this.mesh.position.add(forward.clone().multiplyScalar(-passo));  // S
+        if (tecla === 65) this.mesh.position.add(right.clone().multiplyScalar(passo));     // A
+        if (tecla === 68) this.mesh.position.add(right.clone().multiplyScalar(-passo));    // D
+    }
 
-function onMouseMove(event) {
-    cameraAngle -= event.movementX * 0.002; // inverter horizontal
-    cameraPitch -= event.movementY * 0.002; // adicionar vertical
-    cameraPitch = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, cameraPitch)); // limitar pitch
+    orientarParaCamera(camara) {
+        const alvo = new THREE.Vector3(camara.position.x, this.mesh.position.y, camara.position.z);
+        this.mesh.lookAt(alvo);
+    }
+
+    get posicao() {
+        return this.mesh.position;
+    }
 }
 
-document.addEventListener('click', function() {
-    controls.lock();
-}, false);
+// ─────────────────────────────────────────────
+// Câmera de 3ª pessoa
+// ─────────────────────────────────────────────
+class CameraTerceirasPessoa {
+    constructor(renderer) {
+        this.camara   = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 200);
+        this.controls = new PointerLockControls(this.camara, renderer.domElement);
 
-// Variáveis para câmera de 3ª pessoa
-var cameraDistance = 10;
-var cameraHeight = 1; // nível do ombro do jogador
-var cameraAngle = 0; // em radianos
-var cameraPitch = 0; // em radianos
+        this.distancia = 10;
+        this.altura    = 1;   // nível do ombro
+        this._angulo    = 0;   // horizontal (radianos)
+        this.pitch     = 0;   // vertical   (radianos)
 
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.shadowMap.enabled = true;
-renderer.setClearColor(0x87ceeb); // cor de fundo (azul céu)
-document.body.appendChild(renderer.domElement);
+        this._onMouseMoveBound = this._onMouseMove.bind(this);
+        this._registarEventos(renderer);
+    }
 
-var geometriaChao = new THREE.PlaneGeometry(20, 20);
-var materialChao  = new THREE.MeshStandardMaterial({ color: 0x888888 });
-var meshChao      = new THREE.Mesh(geometriaChao, materialChao);
+    _registarEventos(renderer) {
+        this.controls.addEventListener('lock', () => {
+            document.addEventListener('mousemove', this._onMouseMoveBound, false);
+        });
 
-meshChao.rotation.x = -Math.PI / 2; // deitamos o plano na horizontal
-meshChao.receiveShadow = true;
+        this.controls.addEventListener('unlock', () => {
+            document.removeEventListener('mousemove', this._onMouseMoveBound, false);
+        });
 
-var luzAmbiente   = new THREE.AmbientLight(0xffffff, 0.5);
-var luzDirecional = new THREE.DirectionalLight(0xffffff, 1);
-luzDirecional.position.set(5, 10, 5);
+        document.addEventListener('click', () => this.controls.lock(), false);
+    }
 
-var geometriaParede = new THREE.BoxGeometry(20, 4, 0.3);
-var materialParede  = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
+    _onMouseMove(event) {
+        this._angulo -= event.movementX * 0.002;
+        this.pitch  -= event.movementY * 0.002;
+        this.pitch   = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, this.pitch));
+    }
 
-var meshParede1 = new THREE.Mesh(geometriaParede, materialParede);
-meshParede1.position.set(0, 2, -10); // fundo da cena
-meshParede1.castShadow    = true;
-meshParede1.receiveShadow = true;
+    atualizar(posicaoJogador) {
+        const offsetX = this.distancia * Math.sin(this._angulo) * Math.cos(this.pitch);
+        const offsetZ = this.distancia * Math.cos(this._angulo) * Math.cos(this.pitch);
+        const offsetY = this.distancia * Math.sin(this.pitch);
 
-var meshParede2 = new THREE.Mesh(geometriaParede, materialParede);
-meshParede2.rotation.y = Math.PI / 2;  // rodamos 90° para ficar lateral
-meshParede2.position.set(-10, 2, 0);   // lado esquerdo
-meshParede2.castShadow    = true;
-meshParede2.receiveShadow = true;
+        this.camara.position.set(
+            posicaoJogador.x + offsetX,
+            posicaoJogador.y + this.altura + offsetY,
+            posicaoJogador.z + offsetZ
+        );
+        this.camara.lookAt(posicaoJogador);
+    }
 
-var geometriaJogador = new THREE.BoxGeometry(1, 1, 1);
-var textura          = new THREE.TextureLoader().load('./Imagens/boxImage.jpg');
-var materialJogador  = new THREE.MeshStandardMaterial({ map: textura });
-var meshJogador      = new THREE.Mesh(geometriaJogador, materialJogador);
-
-meshJogador.position.set(0, 0.5, 0); // 0.5 para assentar no chão (o cubo tem altura 1, logo o centro fica a metade)
-meshJogador.castShadow    = true;
-meshJogador.receiveShadow = true;
-
-//const controlos = new PointerLockControls(camara, renderer.domElement);
-
-/*document.addEventListener('click', function () {
-    controlos.lock();
-}, false);*/
-
-document.addEventListener('keydown', function (event) {
-    var forward = new THREE.Vector3(-Math.sin(cameraAngle), 0, -Math.cos(cameraAngle));
-    var right = new THREE.Vector3(-Math.cos(cameraAngle), 0, Math.sin(cameraAngle));
-    
-    if (event.which == 87) meshJogador.position.add(forward.clone().multiplyScalar(0.25));  // W
-    if (event.which == 83) meshJogador.position.add(forward.clone().multiplyScalar(-0.25)); // S
-    if (event.which == 65) meshJogador.position.add(right.clone().multiplyScalar(0.25));   // A
-    if (event.which == 68) meshJogador.position.add(right.clone().multiplyScalar(-0.25));    // D
-    
-    // Orientar o jogador para a direção forward
-    meshJogador.lookAt(meshJogador.position.clone().add(forward));
-}, false);
-
-function updateCamera() {
-    var offsetX = cameraDistance * Math.sin(cameraAngle) * Math.cos(cameraPitch);
-    var offsetZ = cameraDistance * Math.cos(cameraAngle) * Math.cos(cameraPitch);
-    var offsetY = cameraDistance * Math.sin(cameraPitch);
-    
-    camara.position.x = meshJogador.position.x + offsetX;
-    camara.position.y = meshJogador.position.y + cameraHeight + offsetY;
-    camara.position.z = meshJogador.position.z + offsetZ;
-    camara.lookAt(meshJogador.position);
+    get angulo() {
+        return this._angulo;
+    }
 }
 
-function iniciar() {
-    cena.add(meshChao);
-    cena.add(luzAmbiente);
-    cena.add(luzDirecional);
-    cena.add(meshParede1);
-    cena.add(meshParede2);
-    cena.add(meshJogador);
+// ─────────────────────────────────────────────
+// Câmera Top-Down
+// ─────────────────────────────────────────────
+class CameraTopDown {
+    constructor(renderer) {
+        this.camara = new THREE.OrthographicCamera(
+            -20, 20, 20, -20, 0.1, 100
+        );
+        this.altura = 15; // Altura da câmera acima do jogador
+    }
 
-    // Configurar câmera inicial
-    updateCamera();
+    atualizar(posicaoJogador) {
+        this.camara.position.set(posicaoJogador.x, this.altura, posicaoJogador.z);
+        this.camara.lookAt(posicaoJogador.x, 0, posicaoJogador.z);
+    }
 
-    renderer.render(cena, camara);
-    requestAnimationFrame(loop);
+    get angulo() {
+        return 0; // Não usado em top-down
+    }
 }
 
-function loop() {
+// ─────────────────────────────────────────────
+// Gerenciador de Câmeras
+// ─────────────────────────────────────────────
+class CameraManager {
+    constructor(renderer) {
+        this.cameraTerceiraPessoa = new CameraTerceirasPessoa(renderer);
+        this.cameraTopDown = new CameraTopDown(renderer);
+        this.cameraAtual = this.cameraTerceiraPessoa; // Começar com top-down
+    }
 
-    // Orientar o jogador para a câmera (apenas horizontal)
-    var target = new THREE.Vector3(camara.position.x, meshJogador.position.y, camara.position.z);
-    meshJogador.lookAt(target);
-    // Atualizar câmera
-    updateCamera();
-    
-    renderer.render(cena, camara);
-    requestAnimationFrame(loop);
+    alternar() {
+        if (this.cameraAtual === this.cameraTopDown) {
+            this.cameraAtual = this.cameraTerceiraPessoa;
+        } else {
+            this.cameraAtual = this.cameraTopDown;
+        }
+    }
+
+    atualizar(posicaoJogador) {
+        this.cameraAtual.atualizar(posicaoJogador);
+    }
+
+    get camara() {
+        return this.cameraAtual.camara;
+    }
+
+    get angulo() {
+        return this.cameraAtual.angulo;
+    }
 }
+
+
+
+
+
+// ─────────────────────────────────────────────
+// Cenário (chão + paredes + luzes)
+// ─────────────────────────────────────────────
+class Cenario {
+    constructor(cena) {
+        this._adicionarChao(cena);
+        this._adicionarParedes(cena);
+        this._adicionarLuzes(cena);
+    }
+
+    _adicionarChao(cena) {
+        const geometria = new THREE.PlaneGeometry(20, 20);
+        const material  = new THREE.MeshStandardMaterial({ color: 0x888888 });
+        const mesh      = new THREE.Mesh(geometria, material);
+
+        mesh.rotation.x    = -Math.PI / 2;
+        mesh.receiveShadow = true;
+        cena.add(mesh);
+    }
+
+    _adicionarParedes(cena) {
+        const geometria = new THREE.BoxGeometry(20, 4, 0.3);
+        const material  = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
+
+        const parede1 = new THREE.Mesh(geometria, material);
+        parede1.position.set(0, 2, -10);
+        parede1.castShadow    = true;
+        parede1.receiveShadow = true;
+
+        const parede2 = new THREE.Mesh(geometria, material);
+        parede2.rotation.y = Math.PI / 2;
+        parede2.position.set(-10, 2, 0);
+        parede2.castShadow    = true;
+        parede2.receiveShadow = true;
+
+        cena.add(parede1);
+        cena.add(parede2);
+    }
+
+    _adicionarLuzes(cena) {
+        const luzAmbiente   = new THREE.AmbientLight(0xffffff, 0.5);
+        const luzDirecional = new THREE.DirectionalLight(0xffffff, 1);
+        luzDirecional.position.set(5, 10, 5);
+
+        cena.add(luzAmbiente);
+        cena.add(luzDirecional);
+    }
+}
+
+// ─────────────────────────────────────────────
+// Jogo (ponto de entrada)
+// ─────────────────────────────────────────────
+class Jogo {
+    constructor() {
+        this.cena     = new THREE.Scene();
+        this.renderer = this._criarRenderer();
+
+        this.cenario  = new Cenario(this.cena);
+        this.jogador  = new Jogador(this.cena);
+        this.cameraManager = new CameraManager(this.renderer);
+
+        this._registarEventos();
+        this.cameraManager.atualizar(this.jogador.posicao);
+
+        this._loop();
+    }
+
+    _criarRenderer() {
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.setClearColor(0x87ceeb);
+        document.body.appendChild(renderer.domElement);
+        return renderer;
+    }
+
+    _registarEventos() {
+        document.addEventListener('keydown', (event) => {
+            if (event.which === 67) { // C
+                this.cameraManager.alternar();
+            } else {
+                this.jogador.mover(this.cameraManager.angulo, event.which);
+            }
+        }, false);
+    }
+
+    _loop() {
+        this.jogador.orientarParaCamera(this.cameraManager.camara);
+        this.cameraManager.atualizar(this.jogador.posicao);
+        this.renderer.render(this.cena, this.cameraManager.camara);
+        requestAnimationFrame(this._loop.bind(this));
+    }
+}
+
+// ─────────────────────────────────────────────
+// Iniciar
+// ─────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => new Jogo());
