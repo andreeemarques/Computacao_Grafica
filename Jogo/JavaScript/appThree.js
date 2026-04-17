@@ -23,10 +23,10 @@ class Jogador {
         const right   = new THREE.Vector3(-Math.cos(cameraAngle), 0,  Math.sin(cameraAngle));
         const passo   = 0.25;
  
-        if (tecla === 87) this.mesh.position.add(forward.clone().multiplyScalar(passo));   // W
-        if (tecla === 83) this.mesh.position.add(forward.clone().multiplyScalar(-passo));  // S
-        if (tecla === 65) this.mesh.position.add(right.clone().multiplyScalar(passo));     // A
-        if (tecla === 68) this.mesh.position.add(right.clone().multiplyScalar(-passo));    // D
+        if (tecla == 87) this.mesh.position.add(forward.clone().multiplyScalar(passo));   // W
+        if (tecla == 83) this.mesh.position.add(forward.clone().multiplyScalar(-passo));  // S
+        if (tecla == 65) this.mesh.position.add(right.clone().multiplyScalar(passo));     // A
+        if (tecla == 68) this.mesh.position.add(right.clone().multiplyScalar(-passo));    // D
     }
 
     orientarParaCamera(camara) {
@@ -97,10 +97,15 @@ class CameraTerceirasPessoa {
 // ─────────────────────────────────────────────
 class CameraTopDown {
     constructor(renderer) {
+        this.viewSize = 25;
+        this.aspectRatio = window.innerWidth / window.innerHeight;
+
         this.camara = new THREE.OrthographicCamera(
-            -20, 20, 20, -20, 0.1, 100
+            -this.aspectRatio * this.viewSize / 2, this.aspectRatio * this.viewSize / 2,
+            this.viewSize / 2, -this.viewSize / 2,
+            -1000, 1000
         );
-        this.altura = 15; // Altura da câmera acima do jogador
+        this.altura = 10; // Altura da câmera acima do jogador
     }
 
     atualizar(posicaoJogador) {
@@ -120,7 +125,7 @@ class CameraManager {
     constructor(renderer) {
         this.cameraTerceiraPessoa = new CameraTerceirasPessoa(renderer);
         this.cameraTopDown = new CameraTopDown(renderer);
-        this.cameraAtual = this.cameraTerceiraPessoa; // Começar com top-down
+        this.cameraAtual = this.cameraTopDown; // Começar com top-down
     }
 
     alternar() {
@@ -144,10 +149,6 @@ class CameraManager {
     }
 }
 
-
-
-
-
 // ─────────────────────────────────────────────
 // Cenário (chão + paredes + luzes)
 // ─────────────────────────────────────────────
@@ -156,6 +157,8 @@ class Cenario {
         this._adicionarChao(cena);
         this._adicionarParedes(cena);
         this._adicionarLuzes(cena);
+        this._adicionarSkybox(cena);
+        this._adicionarCaixa(cena);
     }
 
     _adicionarChao(cena) {
@@ -195,7 +198,47 @@ class Cenario {
         cena.add(luzAmbiente);
         cena.add(luzDirecional);
     }
+    _adicionarSkybox(cena)
+    {
+        var texture_dir = new THREE.TextureLoader().load( './Skybox/posx.jpg');
+        var texture_esq = new THREE.TextureLoader().load( './Skybox/negx.jpg');
+        var texture_up = new THREE.TextureLoader().load( './Skybox/posy.jpg');
+        var texture_dn = new THREE.TextureLoader().load( './Skybox/negy.jpg');
+        var texture_bk = new THREE.TextureLoader().load( './Skybox/posz.jpg');
+        var texture_ft = new THREE.TextureLoader().load( './Skybox/negz.jpg');
+
+        var materialArray = [];
+        
+        materialArray.push(new THREE.MeshBasicMaterial( { map: texture_dir}));
+        materialArray.push(new THREE.MeshBasicMaterial( { map: texture_esq}));
+        materialArray.push(new THREE.MeshBasicMaterial( { map: texture_up}));
+        materialArray.push(new THREE.MeshBasicMaterial( { map: texture_dn}));
+        materialArray.push(new THREE.MeshBasicMaterial( { map: texture_bk}));
+        materialArray.push(new THREE.MeshBasicMaterial( { map: texture_ft}));
+        
+        for (var i =0; i < 6; i++)
+            materialArray[i].side = THREE.BackSide;
+        
+        var skyboxGeo = new THREE.BoxGeometry(100, 100, 100);
+        
+        var skybox = new THREE.Mesh(skyboxGeo, materialArray);
+
+        cena.add(skybox);
+    }
+    _adicionarCaixa(cena)
+    {
+        const geometria = new THREE.BoxGeometry(1.5,1.5,1);
+        const material = new THREE.MeshStandardMaterial({color: 0x954535 });
+
+        const Caixa1 = new THREE.Mesh(geometria, material);
+        Caixa1.position.set(0, 0.5, -5);
+        Caixa1.castShadow    = true;
+        Caixa1.receiveShadow = true;
+
+        cena.add(Caixa1);
+    }
 }
+
 
 // ─────────────────────────────────────────────
 // Jogo (ponto de entrada)
