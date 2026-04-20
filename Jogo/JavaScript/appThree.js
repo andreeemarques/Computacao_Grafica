@@ -122,10 +122,12 @@ class CameraTopDown {
 // Gerenciador de Câmeras
 // ─────────────────────────────────────────────
 class CameraManager {
-    constructor(renderer) {
+    constructor(renderer, initialCamera = 'topdown') {
         this.cameraTerceiraPessoa = new CameraTerceirasPessoa(renderer);
         this.cameraTopDown        = new CameraTopDown(renderer);
-        this.cameraAtual          = this.cameraTopDown;
+        this.cameraAtual          = initialCamera === 'thirdperson'
+            ? this.cameraTerceiraPessoa
+            : this.cameraTopDown;
     }
 
     alternar() {
@@ -443,16 +445,43 @@ _adicionarCaixas(cena) {
     }
 }
 
+class MainMenu {
+    constructor() {
+        this.menuElement = document.getElementById('main-menu');
+        this.startButton = document.getElementById('start-button');
+    }
+
+    getSelectedCamera() {
+        const selected = document.querySelector('input[name="camera"]:checked');
+        return selected ? selected.value : 'topdown';
+    }
+
+    onStart(callback) {
+        if (!this.startButton) return;
+        this.startButton.addEventListener('click', () => {
+            const cameraChoice = this.getSelectedCamera();
+            this.hide();
+            callback(cameraChoice);
+        });
+    }
+
+    hide() {
+        if (this.menuElement) {
+            this.menuElement.style.display = 'none';
+        }
+    }
+}
+
 // ─────────────────────────────────────────────
 // Jogo (ponto de entrada)
 // ─────────────────────────────────────────────
 class Jogo {
-    constructor() {
+    constructor(initialCamera) {
         this.cena      = new THREE.Scene();
         this.renderer  = this._criarRenderer();
         this.cenario   = new Cenario(this.cena);
         this.jogador   = new Jogador(this.cena);
-        this.cameraManager = new CameraManager(this.renderer);
+        this.cameraManager = new CameraManager(this.renderer, initialCamera);
 
         this._registarEventos();
         this.cameraManager.atualizar(this.jogador.posicao);
@@ -489,4 +518,7 @@ class Jogo {
 // ─────────────────────────────────────────────
 // Iniciar
 // ─────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => new Jogo());
+document.addEventListener('DOMContentLoaded', () => {
+    const menu = new MainMenu();
+    menu.onStart((cameraChoice) => new Jogo(cameraChoice));
+});
