@@ -11,7 +11,7 @@ class Jogador {
         const material  = new THREE.MeshStandardMaterial({ map: textura });
 
         this.mesh = new THREE.Mesh(geometria, material);
-        this.mesh.position.set(38, 0.5, 50); // ← mais para trás
+        this.mesh.position.set(49, 0.5, 49); // ← mais para trás
         this.mesh.castShadow    = true;
         this.mesh.receiveShadow = true;
 
@@ -178,22 +178,24 @@ _adicionarParedesArea(cena) {
     const larguraX = 24; // de x:26 a x:50
     const larguraZ = 36; // ajustado para caber no chão (de z:14 a z:50)
 
-    // Parede de cima
+    // Parede de cima z1
     const p1 = new THREE.Mesh(new THREE.BoxGeometry(larguraX, alturaParede, espessura), material);
     p1.position.set(38, alturaParede / 2, 14);
     p1.castShadow = true; p1.receiveShadow = true;
 
-    // Parede de baixo
-    const p2 = new THREE.Mesh(new THREE.BoxGeometry(larguraX, alturaParede, espessura), material);
-    p2.position.set(38, alturaParede / 2, 50); // ← limite do chão
-    p2.castShadow = true; p2.receiveShadow = true;
+    // Parede de baixo z1
+    const p2 = new THREE.Mesh(new THREE.BoxGeometry(40, alturaParede, espessura), material);
+    p2.position.set(30, alturaParede / 2, 50); // ← limite do chão
+    p2.castShadow = true; 
+    p2.receiveShadow = true;
 
-    // Parede esquerda
-    const p3 = new THREE.Mesh(new THREE.BoxGeometry(espessura, alturaParede, larguraZ), material);
-    p3.position.set(26, alturaParede / 2, 32); // ← centro entre z:14 e z:50
-    p3.castShadow = true; p3.receiveShadow = true;
+    // Parede esquerda z1 / Parede direita z2
+    const p3 = new THREE.Mesh(new THREE.BoxGeometry(espessura, alturaParede, 33), material);
+    p3.position.set(26, alturaParede / 2, 33.5); // ← centro entre z:14 e z:50
+    p3.castShadow = true; 
+    p3.receiveShadow = true;
 
-    // Parede direita
+    // Parede direita z1
     const p4 = new THREE.Mesh(new THREE.BoxGeometry(espessura, alturaParede, larguraZ), material);
     p4.position.set(50, alturaParede / 2, 32); // ← centro entre z:14 e z:50
     p4.castShadow = true; p4.receiveShadow = true;
@@ -204,32 +206,221 @@ _adicionarParedesArea(cena) {
     cena.add(p4);
 }
 
-    _adicionarCaixas(cena) {
-        const material = new THREE.MeshStandardMaterial({ color: 0x954535 });
+_criarTexturaMadeira(l, a, p) {
+    // --- Textura difusa com tábuas ---
+    const W = 512, H = 512;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
 
-        const caixas = [
-            // Coluna esquerda (4 caixas) — rodadas 90º (l e p trocados)
-            { x: 33, z: 20, l: 4, a: 2, p: 2.5 },
-            { x: 33, z: 26, l: 4, a: 2, p: 2.5 },
-            { x: 33, z: 32, l: 4, a: 2, p: 2.5 },
-            { x: 33, z: 38, l: 4, a: 2, p: 2.5 },
+    // Fundo base castanho
+    ctx.fillStyle = '#7B4A2D';
+    ctx.fillRect(0, 0, W, H);
 
-            // Coluna direita (4 caixas) — rodadas 90º (l e p trocados)
-            { x: 43, z: 20, l: 4, a: 2, p: 2.5 },
-            { x: 43, z: 26, l: 4, a: 2, p: 2.5 },
-            { x: 43, z: 32, l: 4, a: 2, p: 2.5 },
-            { x: 43, z: 38, l: 4, a: 2, p: 2.5 },
-        ];
+    // Ruído de veio de madeira (linhas horizontais com variação)
+    for (let y = 0; y < H; y++) {
+        const t = y / H;
+        const noiseAmp = 6;
+        const r = Math.round(120 + 15 * Math.sin(y * 0.4 + Math.random() * 0.5));
+        const g = Math.round(72  + 10 * Math.sin(y * 0.3 + 1.2));
+        const b = Math.round(42  +  8 * Math.sin(y * 0.35 + 2.1));
+        ctx.strokeStyle = `rgb(${r},${g},${b})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        for (let x = 0; x <= W; x += 4) {
+            const dy = noiseAmp * Math.sin(x * 0.05 + y * 0.1 + Math.random() * 0.3);
+            ctx.lineTo(x, y + dy);
+        }
+        ctx.stroke();
+    }
 
-        caixas.forEach(({ x, z, l, a, p }) => {
-            const geo  = new THREE.BoxGeometry(l, a, p);
-            const mesh = new THREE.Mesh(geo, material);
-            mesh.position.set(x, a / 2, z);
-            mesh.castShadow    = true;
-            mesh.receiveShadow = true;
+    // Divisórias entre tábuas (separadores horizontais escuros)
+    const numTábuas = 4;
+    const altTábua = H / numTábuas;
+    ctx.strokeStyle = 'rgba(30,15,5,0.7)';
+    ctx.lineWidth = 3;
+    for (let i = 1; i < numTábuas; i++) {
+        const yLine = i * altTábua;
+        ctx.beginPath(); ctx.moveTo(0, yLine); ctx.lineTo(W, yLine); ctx.stroke();
+        // Sombra subtil abaixo de cada tábua
+        ctx.strokeStyle = 'rgba(255,200,140,0.15)';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(0, yLine + 2); ctx.lineTo(W, yLine + 2); ctx.stroke();
+        ctx.strokeStyle = 'rgba(30,15,5,0.7)';
+        ctx.lineWidth = 3;
+    }
+
+    // Nós de madeira aleatórios
+    const rng = (n) => Math.random() * n;
+    for (let i = 0; i < 5; i++) {
+        const cx = rng(W), cy = rng(H);
+        const rx = 8 + rng(12), ry = 5 + rng(8);
+        const grad = ctx.createRadialGradient(cx, cy, 1, cx, cy, rx);
+        grad.addColorStop(0,   'rgba(50,25,10,0.8)');
+        grad.addColorStop(0.5, 'rgba(80,45,20,0.4)');
+        grad.addColorStop(1,   'rgba(80,45,20,0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rx, ry, rng(Math.PI), 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    // Escalar repetição à proporção da caixa
+    tex.repeat.set(l / 2, a / 2);
+    return tex;
+}
+
+_criarNormalMap(l, a) {
+    const W = 512, H = 512;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+
+    // Base neutra (normal apontada para cima: R=128 G=128 B=255)
+    ctx.fillStyle = 'rgb(128,128,255)';
+    ctx.fillRect(0, 0, W, H);
+
+    // Bordas de tábua em relevo
+    const numTábuas = 4;
+    const altTábua = H / numTábuas;
+    for (let i = 0; i < numTábuas; i++) {
+        const y0 = i * altTábua;
+        // Borda superior da tábua (inclinada para cima → verde alto)
+        ctx.fillStyle = 'rgb(128,200,255)';
+        ctx.fillRect(0, y0, W, 4);
+        // Borda inferior (inclinada para baixo → verde baixo)
+        ctx.fillStyle = 'rgb(128,50,255)';
+        ctx.fillRect(0, y0 + altTábua - 4, W, 4);
+    }
+
+    // Veio em normal leve (perturbação subtil em X)
+    for (let y = 0; y < H; y += 2) {
+        const shift = Math.sin(y * 0.3) * 8;
+        const r = Math.round(128 + shift);
+        ctx.fillStyle = `rgb(${r},128,255)`;
+        ctx.fillRect(0, y, W, 1);
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(l / 2, a / 2);
+    return tex;
+}
+
+_adicionarCantoneiras(cena, x, z, l, a, p) {
+    const matMetal = new THREE.MeshStandardMaterial({
+        color: 0x888888,
+        metalness: 0.9,
+        roughness: 0.3,
+    });
+
+    const esp = 0.12; // espessura da cantoneira
+    const tamanho = 0.5;
+
+    // Posições dos 8 cantos: [dx, dy, dz]
+    const cantos = [
+        [-1, -1, -1], [1, -1, -1], [-1, 1, -1], [1, 1, -1],
+        [-1, -1,  1], [1, -1,  1], [-1, 1,  1], [1, 1,  1],
+    ];
+
+    cantos.forEach(([dx, dy, dz]) => {
+        const cx = x + dx * (l / 2 - esp / 2);
+        const cy =     dy * (a / 2 - esp / 2) + a / 2;
+        const cz = z + dz * (p / 2 - esp / 2);
+
+        // Placa horizontal da cantoneira (em L — duas tiras)
+        const geoH = new THREE.BoxGeometry(tamanho, esp, esp);
+        const meshH = new THREE.Mesh(geoH, matMetal);
+        meshH.position.set(cx, cy, z + dz * p / 2);
+        meshH.castShadow = true;
+        cena.add(meshH);
+
+        const geoV = new THREE.BoxGeometry(esp, esp, tamanho);
+        const meshV = new THREE.Mesh(geoV, matMetal);
+        meshV.position.set(x + dx * l / 2, cy, cz);
+        meshV.castShadow = true;
+        cena.add(meshV);
+
+        // Pilar vertical do canto
+        const geoP = new THREE.BoxGeometry(esp, tamanho, esp);
+        const meshP = new THREE.Mesh(geoP, matMetal);
+        meshP.position.set(x + dx * l / 2, cy, z + dz * p / 2);
+        meshP.castShadow = true;
+        cena.add(meshP);
+    });
+}
+
+_adicionarCintas(cena, x, z, l, a, p) {
+    const matCinta = new THREE.MeshStandardMaterial({
+        color: 0x777777,
+        metalness: 0.85,
+        roughness: 0.25,
+    });
+
+    // Duas cintas horizontais a 1/3 e 2/3 da altura
+    [1/3, 2/3].forEach(frac => {
+        const y = frac * a;
+
+        // Face frontal e traseira
+        [-1, 1].forEach(dz => {
+            const geo = new THREE.BoxGeometry(l + 0.02, 0.12, 0.06);
+            const mesh = new THREE.Mesh(geo, matCinta);
+            mesh.position.set(x, y, z + dz * (p / 2 + 0.03));
+            mesh.castShadow = true;
             cena.add(mesh);
         });
-    }
+
+        // Lados esquerdo e direito
+        [-1, 1].forEach(dx => {
+            const geo = new THREE.BoxGeometry(0.06, 0.12, p + 0.02);
+            const mesh = new THREE.Mesh(geo, matCinta);
+            mesh.position.set(x + dx * (l / 2 + 0.03), y, z);
+            mesh.castShadow = true;
+            cena.add(mesh);
+        });
+    });
+}
+
+_adicionarCaixas(cena) {
+    const caixas = [
+        { x: 33, z: 20, l: 4, a: 2, p: 2.5 },
+        { x: 33, z: 26, l: 4, a: 2, p: 2.5 },
+        { x: 33, z: 32, l: 4, a: 2, p: 2.5 },
+        { x: 33, z: 38, l: 4, a: 2, p: 2.5 },
+        { x: 43, z: 20, l: 4, a: 2, p: 2.5 },
+        { x: 43, z: 26, l: 4, a: 2, p: 2.5 },
+        { x: 43, z: 32, l: 4, a: 2, p: 2.5 },
+        { x: 43, z: 38, l: 4, a: 2, p: 2.5 },
+    ];
+
+    caixas.forEach(({ x, z, l, a, p }) => {
+        const texDif = this._criarTexturaMadeira(l, a, p);
+        const texNrm = this._criarNormalMap(l, a);
+
+        const material = new THREE.MeshStandardMaterial({
+            map:         texDif,
+            normalMap:   texNrm,
+            normalScale: new THREE.Vector2(1.2, 1.2),
+            roughness:   0.75,
+            metalness:   0.05,
+            color:       0xffffff, // deixar a textura ditar a cor
+        });
+
+        const geo  = new THREE.BoxGeometry(l, a, p);
+        const mesh = new THREE.Mesh(geo, material);
+        mesh.position.set(x, a / 2, z);
+        mesh.castShadow    = true;
+        mesh.receiveShadow = true;
+        cena.add(mesh);
+
+        // Detalhes metálicos
+        this._adicionarCantoneiras(cena, x, z, l, a, p);
+        this._adicionarCintas(cena, x, z, l, a, p);
+    });
+}
 
     _adicionarLuzes(cena) {
         const luzAmbiente   = new THREE.AmbientLight(0xffffff, 0.5);
