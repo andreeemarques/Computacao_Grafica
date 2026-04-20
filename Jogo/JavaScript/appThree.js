@@ -70,7 +70,7 @@ class CameraTerceirasPessoa {
 
     _onMouseMove(event) {
         this._angulo -= event.movementX * 0.002;
-        this.pitch  -= event.movementY * 0.002;
+        this.pitch  += event.movementY * 0.002;
         this.pitch   = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, this.pitch));
     }
 
