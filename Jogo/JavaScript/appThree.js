@@ -179,13 +179,13 @@ _adicionarParedesArea(cena) {
     const larguraZ = 36; // ajustado para caber no chão (de z:14 a z:50)
 
     // Parede de cima z1
-    const p1 = new THREE.Mesh(new THREE.BoxGeometry(65, alturaParede, espessura), material);
-    p1.position.set(17.5, alturaParede / 2, 14);
+    const p1 = new THREE.Mesh(new THREE.BoxGeometry(70, alturaParede, espessura), material);
+    p1.position.set(15, alturaParede / 2, 14);
     p1.castShadow = true; p1.receiveShadow = true;
 
     // Parede de baixo z1
-    const p2 = new THREE.Mesh(new THREE.BoxGeometry(65, alturaParede, espessura), material);
-    p2.position.set(17.5, alturaParede / 2, 50); // ← limite do chão
+    const p2 = new THREE.Mesh(new THREE.BoxGeometry(85, alturaParede, espessura), material);
+    p2.position.set(7.5, alturaParede / 2, 50); // ← limite do chão
     p2.castShadow = true; 
     p2.receiveShadow = true;
 
@@ -200,10 +200,22 @@ _adicionarParedesArea(cena) {
     p4.position.set(50, alturaParede / 2, 32); // ← centro entre z:14 e z:50
     p4.castShadow = true; p4.receiveShadow = true;
 
+    // Parede esquerda exterior z2
+    const p5 = new THREE.Mesh(new THREE.BoxGeometry(espessura, alturaParede, 36), material);
+    p5.position.set(-35, alturaParede / 2, 32);
+    p5.castShadow = true; p5.receiveShadow = true;
+
+    // Parede de ligação — conecta parede esquerda à parede 1, no mesmo z:2
+    const p6 = new THREE.Mesh(new THREE.BoxGeometry(10, alturaParede, espessura), material);
+    p6.position.set(-30, alturaParede / 2, 14);
+    p6.castShadow = true; p6.receiveShadow = true;
+
     cena.add(p1);
     cena.add(p2);
     cena.add(p3);
     cena.add(p4);
+    cena.add(p5);
+    cena.add(p6);
 }
 
 _criarTexturaMadeira(l, a, p) {
@@ -394,6 +406,10 @@ _adicionarCaixas(cena) {
         { x: 43, z: 26, l: 4, a: 2, p: 2.5 },
         { x: 43, z: 32, l: 4, a: 2, p: 2.5 },
         { x: 43, z: 38, l: 4, a: 2, p: 2.5 },
+        { x: 17.5, z: 15.5, l: 4, a: 2, p: 2.5 },//Cabine
+        { x: 20, z: 28, l: 4, a: 2, p: 2.5 },
+        { x: 20, z: 34, l: 4, a: 2, p: 2.5 },
+        { x: 20, z: 40, l: 4, a: 2, p: 2.5 },
     ];
 
     caixas.forEach(({ x, z, l, a, p }) => {
