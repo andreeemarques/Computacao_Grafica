@@ -179,13 +179,13 @@ _adicionarParedesArea(cena) {
     const larguraZ = 36; // ajustado para caber no chão (de z:14 a z:50)
 
     // Parede de cima z1
-    const p1 = new THREE.Mesh(new THREE.BoxGeometry(larguraX, alturaParede, espessura), material);
-    p1.position.set(38, alturaParede / 2, 14);
+    const p1 = new THREE.Mesh(new THREE.BoxGeometry(65, alturaParede, espessura), material);
+    p1.position.set(17.5, alturaParede / 2, 14);
     p1.castShadow = true; p1.receiveShadow = true;
 
     // Parede de baixo z1
-    const p2 = new THREE.Mesh(new THREE.BoxGeometry(40, alturaParede, espessura), material);
-    p2.position.set(30, alturaParede / 2, 50); // ← limite do chão
+    const p2 = new THREE.Mesh(new THREE.BoxGeometry(65, alturaParede, espessura), material);
+    p2.position.set(17.5, alturaParede / 2, 50); // ← limite do chão
     p2.castShadow = true; 
     p2.receiveShadow = true;
 
