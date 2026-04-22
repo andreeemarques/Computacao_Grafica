@@ -158,6 +158,9 @@ class Cenario {
         this._adicionarParedesArea(cena);
         this._adicionarCaixas(cena);
         this._adicionarEdificios(cena);
+        this._adicionarContentores(cena);
+        this.cabine = new Cabine(cena, 12, 15.7, 0);
+        this._adicionarHalfWall(cena);
         this._adicionarLuzes(cena);
         this.skybox = this._adicionarSkybox(cena);
     }
@@ -332,7 +335,7 @@ class Cenario {
             { x: -13, z: 5, l: 18, a: 20, p: 14, comEntrada: true, rotacao: 0 },
 
             // Edifício no meio da área esquerda
-            { x: -5, z: 38, l: 14, a: 15, p: 12, comEntrada: true, rotacao: Math.PI },
+            { x: -13, z: 36.8, l: 30, a: 20, p: 14, comEntrada: true, rotacao: Math.PI },
         ];
 
         edificios.forEach(({ x, z, l, a, p, comEntrada, rotacao }) => {
@@ -555,6 +558,7 @@ class Cenario {
 
     _adicionarCaixas(cena) {
         const caixas = [
+            //Caixas da zona 1
             { x: 33, z: 20,     l: 4, a: 2, p: 2.5 },
             { x: 33, z: 26,     l: 4, a: 2, p: 2.5 },
             { x: 33, z: 32,     l: 4, a: 2, p: 2.5 },
@@ -563,10 +567,10 @@ class Cenario {
             { x: 43, z: 26,     l: 4, a: 2, p: 2.5 },
             { x: 43, z: 32,     l: 4, a: 2, p: 2.5 },
             { x: 43, z: 38,     l: 4, a: 2, p: 2.5 },
-            { x: 17.5, z: 15.5, l: 4, a: 2, p: 2.5 }, // Cabine
-            { x: 20, z: 28,     l: 4, a: 2, p: 2.5 },
-            { x: 20, z: 34,     l: 4, a: 2, p: 2.5 },
-            { x: 20, z: 40,     l: 4, a: 2, p: 2.5 },
+            //Caixas da zona 2
+            { x: 3.2, z: 37,     l: 2, a: 3, p: 2 },//caixa do lado direito do prédio da zona 2
+            { x: -13, z: 45,     l: 2, a: 3, p: 2 },//caixa do lado a trás do prédio da zona 2
+            { x: -29.2, z: 37,     l: 2, a: 3, p: 2 },//caixa do lado esquerdo do prédio da zona 2
         ];
 
         caixas.forEach(({ x, z, l, a, p }) => {
@@ -614,7 +618,339 @@ class Cenario {
         cena.add(skybox);
         return skybox;
     }
+
+    _adicionarHalfWall(cena) {
+    const alturaHW  = 2.0;   // meia parede ~1m de altura
+    const espessura = 0.15;
+    const comprimento = 9;
+
+    const matHW = new THREE.MeshStandardMaterial({
+        color:     0xd0ccc8,
+        roughness: 0.85,
+        metalness: 0.05,
+    });
+
+    // Corpo principal da half wall
+    const geo  = new THREE.BoxGeometry(comprimento, alturaHW, espessura);
+    const mesh = new THREE.Mesh(geo, matHW);
+
+    // Lado esquerdo da cabine: x=12, L=3 → borda esquerda em x=10.5
+    // A wall estende-se mais para a esquerda, centrada em x = 10.5 - comprimento/2
+    mesh.position.set(
+        -8 - comprimento / 2,   // x: centrado na extensão à esquerda
+        alturaHW / 2,              // y: assente no chão
+        18                       // z: alinhado com o centro da cabine
+    );
+    mesh.castShadow    = true;
+    mesh.receiveShadow = true;
+    cena.add(mesh);
+
+    // Tampa no topo (acabamento)
+    const matTampa = new THREE.MeshStandardMaterial({
+        color:     0xb8b4b0,
+        roughness: 0.6,
+        metalness: 0.1,
+    });
+    const geoTampa  = new THREE.BoxGeometry(comprimento + 0.1, 0.08, espessura + 0.1);
+    const tampa     = new THREE.Mesh(geoTampa, matTampa);
+    tampa.position.set(
+        10.5 - comprimento / 2,
+        alturaHW + 0.04,
+        15.7
+    );
+    tampa.castShadow = true;
+    cena.add(tampa);
+    }
+    _criarTexturaContentor(cor = '#4a7c59') {
+    const W = 512, H = 512;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+
+    // Base metálica com cor sólida
+    ctx.fillStyle = cor;
+    ctx.fillRect(0, 0, W, H);
+
+    // Variação subtil de luminosidade vertical (painéis ondulados)
+    for (let x = 0; x < W; x += 16) {
+        const shade = Math.sin(x * 0.05) * 15;
+        const r = parseInt(cor.slice(1,3), 16) + shade;
+        const g = parseInt(cor.slice(3,5), 16) + shade;
+        const b = parseInt(cor.slice(5,7), 16) + shade;
+        ctx.fillStyle = `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`;
+        ctx.fillRect(x, 0, 16, H);
+    }
+
+    // Nervuras verticais (corrugado metálico)
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    ctx.lineWidth = 2;
+    for (let x = 0; x < W; x += 16) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+    }
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 1;
+    for (let x = 8; x < W; x += 16) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+    }
+
+    // Linhas horizontais de reforço
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+    ctx.lineWidth = 3;
+    [0.05, 0.5, 0.95].forEach(frac => {
+        const y = frac * H;
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    });
+
+    // Riscos e desgaste
+    for (let i = 0; i < 12; i++) {
+        const sx = Math.random() * W;
+        const sy = Math.random() * H;
+        const ex = sx + (Math.random() - 0.5) * 60;
+        const ey = sy + (Math.random() - 0.5) * 20;
+        ctx.strokeStyle = `rgba(0,0,0,${0.1 + Math.random() * 0.15})`;
+        ctx.lineWidth = 0.5 + Math.random();
+        ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+    }
+
+    // Manchas de ferrugem
+    for (let i = 0; i < 6; i++) {
+        const cx = Math.random() * W;
+        const cy = Math.random() * H;
+        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 18 + Math.random() * 14);
+        grad.addColorStop(0,   'rgba(120,60,10,0.45)');
+        grad.addColorStop(0.5, 'rgba(100,45,5,0.2)');
+        grad.addColorStop(1,   'rgba(80,35,0,0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, 18 + Math.random()*10, 10 + Math.random()*8, Math.random()*Math.PI, 0, Math.PI*2);
+        ctx.fill();
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    return tex;
+    }
+    _adicionarContentores(cena) {
+    const contentores = [
+        { x: 20, z: 28, l: 6, a: 2.6, p: 3, cor: '#4a7c59' }, // verde militar
+        { x: 20, z: 38, l: 6, a: 2.6, p: 3, cor: '#7a6a52' }, // bege/cáqui
+    ];
+
+    contentores.forEach(({ x, z, l, a, p, cor }) => {
+        const texMetal = this._criarTexturaContentor(cor);
+
+        const matLateral = new THREE.MeshStandardMaterial({
+            map:       texMetal,
+            roughness: 0.55,
+            metalness: 0.6,
+        });
+        const matTopo = new THREE.MeshStandardMaterial({
+            color:     0x333333,
+            roughness: 0.6,
+            metalness: 0.7,
+        });
+
+        // [direita, esquerda, topo, base, frente, trás]
+        const materiais = [
+            matLateral, matLateral,
+            matTopo,    matTopo,
+            matLateral, matLateral,
+        ];
+
+        const geo  = new THREE.BoxGeometry(l, a, p);
+        const mesh = new THREE.Mesh(geo, materiais);
+        mesh.position.set(x, a / 2, z);
+        mesh.castShadow    = true;
+        mesh.receiveShadow = true;
+        cena.add(mesh);
+
+        // Reforços metálicos nas arestas (cantoneiras)
+        const matAco = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.9, roughness: 0.2 });
+        const cantos = [[-1,-1,-1],[1,-1,-1],[-1,1,-1],[1,1,-1],[-1,-1,1],[1,-1,1],[-1,1,1],[1,1,1]];
+        cantos.forEach(([dx, dy, dz]) => {
+            const c = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.12), matAco);
+            c.position.set(x + dx * l/2, dy * a/2 + a/2, z + dz * p/2);
+            c.castShadow = true;
+            cena.add(c);
+        });
+
+        // Faixas de reforço horizontais
+        const matFaixa = new THREE.MeshStandardMaterial({ color: 0x555555, metalness: 0.85, roughness: 0.25 });
+        [-1, 1].forEach(dz => {
+            const faixa = new THREE.Mesh(new THREE.BoxGeometry(l + 0.02, 0.1, 0.06), matFaixa);
+            faixa.position.set(x, a * 0.5 + a/2 * 0 , z + dz * (p/2 + 0.03));
+            // topo e base
+            [0.08, 0.92].forEach(frac => {
+                const f = new THREE.Mesh(new THREE.BoxGeometry(l + 0.02, 0.1, 0.06), matFaixa);
+                f.position.set(x, frac * a, z + dz * (p / 2 + 0.03));
+                f.castShadow = true;
+                cena.add(f);
+            });
+        });
+    });
+    }
 }
+
+class Cabine {
+    constructor(cena, x, z, rotacao = 0) {
+        this.x = x;
+        this.z = z;
+        this.rotacao = rotacao;
+        this.grupo = new THREE.Group();
+
+        this._construir();
+
+        this.grupo.position.set(x, 0, z);
+        this.grupo.rotation.y = rotacao;
+        cena.add(this.grupo);
+    }
+
+    _matBranco() {
+        return new THREE.MeshStandardMaterial({ color: 0xf2f2f2, roughness: 0.6, metalness: 0.05 });
+    }
+    _matEscuro() {
+        return new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.5, metalness: 0.3 });
+    }
+    _matVidro() {
+        return new THREE.MeshStandardMaterial({
+            color: 0x334455, transparent: true, opacity: 0.55,
+            roughness: 0.05, metalness: 0.1
+        });
+    }
+
+    _construir() {
+        const L = 3.0, A = 3.2, P = 3.0; // ← altura aumentada para 3.2
+        const esp = 0.12;
+
+        // ── Chão interno ──
+        const chao = new THREE.Mesh(
+            new THREE.BoxGeometry(L, 0.08, P),
+            new THREE.MeshStandardMaterial({ color: 0xaaaaaa, roughness: 0.8 })
+        );
+        chao.position.set(0, 0.04, 0);
+        chao.receiveShadow = true;
+        this.grupo.add(chao);
+
+        // ── Parede traseira (sólida, branca) ──
+        const pTras = new THREE.Mesh(
+            new THREE.BoxGeometry(L, A, esp),
+            this._matBranco()
+        );
+        pTras.position.set(0, A / 2, -P / 2 + esp / 2);
+        pTras.castShadow = true;
+        this.grupo.add(pTras);
+
+        // ── Parede lateral esquerda (sólida, branca) ──
+        const pEsq = new THREE.Mesh(
+            new THREE.BoxGeometry(esp, A, P),
+            this._matBranco()
+        );
+        pEsq.position.set(-L / 2 + esp / 2, A / 2, 0);
+        pEsq.castShadow = true;
+        this.grupo.add(pEsq);
+
+        // ── Parede lateral direita — painel branco inferior + vidro superior ──
+        // Painel branco no terço inferior
+        const painelBrancoDir = new THREE.Mesh(
+            new THREE.BoxGeometry(esp, A * 0.45, P),
+            this._matBranco()
+        );
+        painelBrancoDir.position.set(L / 2 - esp / 2, A * 0.45 / 2, 0);
+        this.grupo.add(painelBrancoDir);
+
+        // Montante escuro no topo
+        const mTopoDir = new THREE.Mesh(
+            new THREE.BoxGeometry(esp, 0.2, P),
+            this._matEscuro()
+        );
+        mTopoDir.position.set(L / 2 - esp / 2, A - 0.1, 0);
+        this.grupo.add(mTopoDir);
+
+        // Vidro lateral direita (parte superior)
+        const vidDta = new THREE.Mesh(
+            new THREE.BoxGeometry(0.04, A * 0.55 - 0.2, P - 0.1),
+            this._matVidro()
+        );
+        vidDta.position.set(L / 2 - esp / 2, A * 0.45 + (A * 0.55 - 0.2) / 2, 0);
+        this.grupo.add(vidDta);
+
+        // ── Parede frontal — aberta no centro (vão da porta), branco nos lados ──
+
+        // Montante escuro superior (cobre toda a largura)
+        const mSupFrente = new THREE.Mesh(
+            new THREE.BoxGeometry(L, 0.2, esp),
+            this._matEscuro()
+        );
+        mSupFrente.position.set(0, A - 0.1, P / 2 - esp / 2);
+        this.grupo.add(mSupFrente);
+
+        // Painel branco inferior esquerdo (junto ao canto)
+        const painelFEsqInf = new THREE.Mesh(
+            new THREE.BoxGeometry(0.5, A * 0.45, esp),
+            this._matBranco()
+        );
+        painelFEsqInf.position.set(-L / 2 + 0.25, A * 0.45 / 2, P / 2 - esp / 2);
+        this.grupo.add(painelFEsqInf);
+
+        // Painel branco inferior direito (junto ao canto)
+        const painelFDtaInf = new THREE.Mesh(
+            new THREE.BoxGeometry(0.5, A * 0.45, esp),
+            this._matBranco()
+        );
+        painelFDtaInf.position.set(L / 2 - 0.25, A * 0.45 / 2, P / 2 - esp / 2);
+        this.grupo.add(painelFDtaInf);
+
+        // Montante vertical esquerdo (escuro, fino)
+        const mVEsq = new THREE.Mesh(
+            new THREE.BoxGeometry(0.08, A - 0.2, esp),
+            this._matEscuro()
+        );
+        mVEsq.position.set(-L / 2 + 0.5 + 0.04, A / 2 - 0.1, P / 2 - esp / 2);
+        this.grupo.add(mVEsq);
+
+        // Montante vertical direito (escuro, fino)
+        const mVDta = new THREE.Mesh(
+            new THREE.BoxGeometry(0.08, A - 0.2, esp),
+            this._matEscuro()
+        );
+        mVDta.position.set(L / 2 - 0.5 - 0.04, A / 2 - 0.1, P / 2 - esp / 2);
+        this.grupo.add(mVDta);
+
+        // ── Teto principal ──
+        const teto = new THREE.Mesh(
+            new THREE.BoxGeometry(L, 0.12, P),
+            this._matBranco()
+        );
+        teto.position.set(0, A, 0);
+        teto.castShadow = true;
+        this.grupo.add(teto);
+
+        // ── Beirado saliente (escuro) ──
+        const beirado = new THREE.Mesh(
+            new THREE.BoxGeometry(L + 0.5, 0.1, P + 0.5),
+            this._matEscuro()
+        );
+        beirado.position.set(0, A + 0.07, 0);
+        beirado.castShadow = true;
+        this.grupo.add(beirado);
+
+        // ── Colunas de canto (perfis escuros) ──
+        [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([dx, dz]) => {
+            const col = new THREE.Mesh(
+                new THREE.BoxGeometry(0.1, A, 0.1),
+                this._matEscuro()
+            );
+            col.position.set(dx * (L / 2 - 0.05), A / 2, dz * (P / 2 - 0.05));
+            col.castShadow = true;
+            this.grupo.add(col);
+        });
+
+        // ── Ponto de referência para o NPC ──
+        //this.posicaoNPC = new THREE.Vector3(x, 0.5, z + P / 2 + 0.6);
+        //this.direcaoNPC = new THREE.Vector3(0, 0, 1);
+    }
+}
+
 
 // ─────────────────────────────────────────────
 // Jogo (ponto de entrada)
