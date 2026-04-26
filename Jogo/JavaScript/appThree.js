@@ -1,11 +1,36 @@
 import * as THREE from 'three';
 import { PointerLockControls } from 'PointerLockControls';
 
+
+class GestorColisoes {
+    constructor() {
+        this.obstaculos = [];
+    }
+
+    registar(mesh) {
+        // Guarda uma Box3 estática calculada a partir do mesh
+        const box = new THREE.Box3().setFromObject(mesh);
+        this.obstaculos.push(box);
+    }
+
+    registarBox(minVec, maxVec) {
+        // Para obstáculos definidos manualmente (paredes finas, etc.)
+        this.obstaculos.push(new THREE.Box3(minVec, maxVec));
+    }
+
+    colide(jogadorBox) {
+        for (const obstaculo of this.obstaculos) {
+            if (jogadorBox.intersectsBox(obstaculo)) return true;
+        }
+        return false;
+    }
+}
+
 // ─────────────────────────────────────────────
 // Jogador
 // ─────────────────────────────────────────────
 class Jogador {
-    constructor(cena) {
+    constructor(cena, gestorColisoes) {
         const geometria = new THREE.BoxGeometry(1, 1, 1);
         const textura   = new THREE.TextureLoader().load('./Imagens/boxImage.jpg');
         const material  = new THREE.MeshStandardMaterial({ map: textura });
@@ -15,7 +40,17 @@ class Jogador {
         this.mesh.castShadow    = true;
         this.mesh.receiveShadow = true;
 
+        this.gestorColisoes = gestorColisoes;
+
         cena.add(this.mesh);
+    }
+
+    _boxNaPosicao(posicao) {
+        const raio = 0.45; // ligeiramente menor que 0.5 para melhor feel
+        return new THREE.Box3(
+            new THREE.Vector3(posicao.x - raio, posicao.y - 0.5, posicao.z - raio),
+            new THREE.Vector3(posicao.x + raio, posicao.y + 0.5, posicao.z + raio)
+        );
     }
 
     mover(cameraAngle, tecla) {
@@ -23,10 +58,37 @@ class Jogador {
         const right   = new THREE.Vector3(-Math.cos(cameraAngle), 0,  Math.sin(cameraAngle));
         const passo   = 0.25;
 
-        if (tecla == 87) this.mesh.position.add(forward.clone().multiplyScalar(passo));
-        if (tecla == 83) this.mesh.position.add(forward.clone().multiplyScalar(-passo));
-        if (tecla == 65) this.mesh.position.add(right.clone().multiplyScalar(passo));
-        if (tecla == 68) this.mesh.position.add(right.clone().multiplyScalar(-passo));
+        let delta = new THREE.Vector3();
+        if (tecla === 87) delta.add(forward.clone().multiplyScalar( passo));
+        if (tecla === 83) delta.add(forward.clone().multiplyScalar(-passo));
+        if (tecla === 65) delta.add(right.clone().multiplyScalar(  passo));
+        if (tecla === 68) delta.add(right.clone().multiplyScalar( -passo));
+
+        if (delta.lengthSq() === 0) return;
+
+        const posAtual = this.mesh.position.clone();
+
+        // ── Tentativa 1: movimento completo (X + Z) ──
+        const posTotal = posAtual.clone().add(delta);
+        if (!this.gestorColisoes.colide(this._boxNaPosicao(posTotal))) {
+            this.mesh.position.copy(posTotal);
+            return;
+        }
+
+        // ── Tentativa 2: só X (deslizar ao longo de Z) ──
+        const posSoX = posAtual.clone();
+        posSoX.x += delta.x;
+        if (!this.gestorColisoes.colide(this._boxNaPosicao(posSoX))) {
+            this.mesh.position.copy(posSoX);
+            return;
+        }
+
+        // ── Tentativa 3: só Z (deslizar ao longo de X) ──
+        const posSoZ = posAtual.clone();
+        posSoZ.z += delta.z;
+        if (!this.gestorColisoes.colide(this._boxNaPosicao(posSoZ))) {
+            this.mesh.position.copy(posSoZ);
+        }
     }
 
     orientarParaCamera(camara) {
@@ -149,11 +211,14 @@ class CameraManager {
     }
 }
 
+
+
 // ─────────────────────────────────────────────
 // Cenário
 // ─────────────────────────────────────────────
 class Cenario {
-    constructor(cena) {
+    constructor(cena, gestorColisoes) {
+        this.gc = gestorColisoes;
         this._adicionarChao(cena);
         this._adicionarParedesArea(cena);
         this._adicionarCaixas(cena);
@@ -212,12 +277,12 @@ class Cenario {
         p6.position.set(-25, alturaParede / 2, 14);
         p6.castShadow = true; p6.receiveShadow = true;
 
-        cena.add(p1);
-        cena.add(p2);
-        cena.add(p3);
-        cena.add(p4);
-        cena.add(p5);
-        cena.add(p6);
+        cena.add(p1); this.gc.registar(p1);
+        cena.add(p2); this.gc.registar(p2);
+        cena.add(p3); this.gc.registar(p3);
+        cena.add(p4); this.gc.registar(p4);
+        cena.add(p5); this.gc.registar(p5);
+        cena.add(p6); this.gc.registar(p6);
     }
 
     // ─────────────────────────────────────────
@@ -375,7 +440,7 @@ class Cenario {
             mesh.rotation.y = rotacao;
             mesh.castShadow    = true;
             mesh.receiveShadow = true;
-            cena.add(mesh);
+            cena.add(mesh); this.gc.registar(mesh);
 
             // Cornija no topo
             const matCornija = new THREE.MeshStandardMaterial({ color: 0x666666, roughness: 0.7 });
@@ -591,7 +656,7 @@ class Cenario {
             mesh.position.set(x, a / 2, z);
             mesh.castShadow    = true;
             mesh.receiveShadow = true;
-            cena.add(mesh);
+            cena.add(mesh); this.gc.registar(mesh);
 
             this._adicionarCantoneiras(cena, x, z, l, a, p);
             this._adicionarCintas(cena, x, z, l, a, p);
@@ -643,7 +708,7 @@ class Cenario {
     );
     mesh.castShadow    = true;
     mesh.receiveShadow = true;
-    cena.add(mesh);
+    cena.add(mesh); this.gc.registar(mesh);
 
     // Tampa no topo (acabamento)
     const matTampa = new THREE.MeshStandardMaterial({
@@ -661,6 +726,7 @@ class Cenario {
     tampa.castShadow = true;
     cena.add(tampa);
     }
+
     _criarTexturaContentor(cor = '#4a7c59') {
     const W = 512, H = 512;
     const canvas = document.createElement('canvas');
@@ -762,7 +828,7 @@ class Cenario {
         mesh.position.set(x, a / 2, z);
         mesh.castShadow    = true;
         mesh.receiveShadow = true;
-        cena.add(mesh);
+        cena.add(mesh); this.gc.registar(mesh);
 
         // Reforços metálicos nas arestas (cantoneiras)
         const matAco = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.9, roughness: 0.2 });
@@ -959,9 +1025,16 @@ class Jogo {
     constructor() {
         this.cena      = new THREE.Scene();
         this.renderer  = this._criarRenderer();
-        this.cenario   = new Cenario(this.cena);
-        this.jogador   = new Jogador(this.cena);
+       this.gestorColisoes   = new GestorColisoes();               // ← criar primeiro
+        this.cenario          = new Cenario(this.cena, this.gestorColisoes); // ← passar
+        this.jogador          = new Jogador(this.cena, this.gestorColisoes); // ← passar
         this.cameraManager = new CameraManager(this.renderer);
+
+        // Colisão manual para a cabine
+        this.gestorColisoes.registarBox(
+            new THREE.Vector3(10.5, 0, 14.2),
+            new THREE.Vector3(13.5, 3.2, 17.2)
+        );
 
         this._registarEventos();
         this.cameraManager.atualizar(this.jogador.posicao);
