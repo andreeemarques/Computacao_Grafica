@@ -25,16 +25,18 @@ export class Jogador
             );
         }
     
-        mover(cameraAngle, tecla) {
+        mover(cameraAngle, teclas) {
             const forward = new THREE.Vector3(-Math.sin(cameraAngle), 0, -Math.cos(cameraAngle));
             const right   = new THREE.Vector3(-Math.cos(cameraAngle), 0,  Math.sin(cameraAngle));
-            const passo   = 0.25;
+            const passo   = 0.10;
     
             let delta = new THREE.Vector3();
-            if (tecla === 87) delta.add(forward.clone().multiplyScalar( passo));
-            if (tecla === 83) delta.add(forward.clone().multiplyScalar(-passo));
-            if (tecla === 65) delta.add(right.clone().multiplyScalar(  passo));
-            if (tecla === 68) delta.add(right.clone().multiplyScalar( -passo));
+            teclas.forEach(tecla => {
+                if (tecla === 87) delta.add(forward.clone().multiplyScalar( passo));
+                if (tecla === 83) delta.add(forward.clone().multiplyScalar(-passo));
+                if (tecla === 65) delta.add(right.clone().multiplyScalar(  passo));
+                if (tecla === 68) delta.add(right.clone().multiplyScalar( -passo));
+            });
     
             if (delta.lengthSq() === 0) return;
     

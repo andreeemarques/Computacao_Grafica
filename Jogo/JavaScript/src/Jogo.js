@@ -13,6 +13,7 @@ export class Jogo
             this.cenario          = new Cenario(this.cena, this.gestorColisoes); // ← passar
             this.jogador          = new Jogador(this.cena, this.gestorColisoes); // ← passar
             this.cameraManager = new CamaraManager(this.renderer);
+            this.teclasPressionadas = new Set();
     
             // Colisão manual para a cabine
             this.gestorColisoes.registarBox(
@@ -38,13 +39,19 @@ export class Jogo
             document.addEventListener('keydown', (event) => {
                 if (event.which === 67) { // C
                     this.cameraManager.alternar();
-                } else {
-                    this.jogador.mover(this.cameraManager.angulo, event.which);
+                } else if ([87, 83, 65, 68].includes(event.which)) {
+                    this.teclasPressionadas.add(event.which);
+                }
+            }, false);
+            document.addEventListener('keyup', (event) => {
+                if ([87, 83, 65, 68].includes(event.which)) {
+                    this.teclasPressionadas.delete(event.which);
                 }
             }, false);
         }
     
         _loop() {
+            this.jogador.mover(this.cameraManager.angulo, Array.from(this.teclasPressionadas));
             this.jogador.orientarParaCamera(this.cameraManager.camara);
             this.cameraManager.atualizar(this.jogador.posicao);
             // Fazer a skybox seguir a câmara
