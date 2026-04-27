@@ -7,7 +7,7 @@ export class Jogador
         this.grupo.position.set(49, 0, 49);
         this._construir();
         cena.add(this.grupo);
-        
+        this.ultimaDirecao = new THREE.Vector3(0, 0, 1);
         this.gestorColisoes = gestorColisoes;
         this.mesh = this.grupo; // Compatibilidade com código existente
     }
@@ -246,7 +246,7 @@ export class Jogador
             });
     
             if (delta.lengthSq() === 0) return;
-    
+            this.ultimaDirecao.copy(delta).normalize();
             const posAtual = this.grupo.position.clone();
     
             // ── Tentativa 1: movimento completo (X + Z) ──
@@ -273,7 +273,7 @@ export class Jogador
         }
     
         orientarParaCamera(camara) {
-            const alvo = new THREE.Vector3(camara.position.x, this.grupo.position.y, camara.position.z);
+            const alvo = this.grupo.position.clone().add(this.ultimaDirecao);
             this.grupo.lookAt(alvo);
         }
     
