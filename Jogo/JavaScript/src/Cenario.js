@@ -17,7 +17,6 @@ export class Cenario
             this._adicionarContentores(cena);
             this.cabine = new Cabine(cena, 12, 15.7, 0);
             this._adicionarHalfWall(cena);
-            this._adicionarLuzes(cena);
             this.skybox = this._adicionarSkybox(cena);
         }
     
@@ -28,15 +27,6 @@ export class Cenario
             mesh.rotation.x    = -Math.PI / 2;
             mesh.receiveShadow = true;
             cena.add(mesh);
-        }
-    
-        _adicionarLuzes(cena) {
-            const luzAmbiente   = new THREE.AmbientLight(0xffffff, 0.5);
-            const luzDirecional = new THREE.DirectionalLight(0xffffff, 1);
-            luzDirecional.position.set(5, 10, 5);
-            luzDirecional.castShadow = true;
-            cena.add(luzAmbiente);
-            cena.add(luzDirecional);
         }
     
         _adicionarSkybox(cena) {

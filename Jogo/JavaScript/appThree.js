@@ -1,3 +1,3 @@
 import { Jogo } from './src/Jogo.js';
 
-document.addEventListener('DOMContentLoaded', () => new Jogo());
+document.addEventListener('iniciarJogo', () => new Jogo());
