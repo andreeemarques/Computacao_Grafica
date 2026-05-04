@@ -34,15 +34,14 @@ export class UILuzes {
 
         // Lista de luzes com nome de exibição
         const luzes = [
-            { nome: 'ambiente',    label: 'Ambiente' },
-            { nome: 'direcional',  label: 'Direcional (Sol)' },
-            { nome: 'ponto1',      label: 'Ponto 1 (Laranja)' },
-            { nome: 'ponto2',      label: 'Ponto 2 (Azul)' },
-            { nome: 'hemisferica', label: 'Hemisférica' },
-            { nome: 'spot',        label: 'Spot' },
+            { nome: 'ambiente',    label: 'Ambiente', tipo: 'simples' },
+            { nome: 'direcional',  label: 'Direcional (Sol)', tipo: 'simples' },
+            { nome: 'hemisferica', label: 'Hemisférica', tipo: 'simples' },
+            /*{ nome: 'spot',        label: 'Spot', tipo: 'simples' },*/
+            { nome: 'postes',      label: 'Postes (Point)',   tipo: 'postes'  },
         ];
 
-        luzes.forEach(({ nome, label }) => {
+        luzes.forEach(({ nome, label, tipo }) => {
             const linha = document.createElement('div');
             linha.style.cssText = `
                 display: flex;
@@ -70,7 +69,9 @@ export class UILuzes {
             `;
 
             const atualizar = () => {
-                const ligada = this.gestor.estaLigada(nome);
+                const ligada = tipo === 'postes'
+                    ? this.gestor.postesLigados()
+                    : this.gestor.estaLigada(nome);
                 toggle.textContent = ligada ? '[ ON ]' : '[ OFF ]';
                 toggle.style.color = ligada ? '#00ff41' : 'rgba(0,255,65,0.3)';
                 toggle.style.borderColor = ligada
@@ -84,7 +85,11 @@ export class UILuzes {
             linha.addEventListener('click', (e) => {
                 // Evita que o clique chegue ao PointerLock
                 e.stopPropagation();
-                this.gestor.alternar(nome);
+                if (tipo === 'postes') {
+                this.gestor.alternarPostes();
+                } else {
+                    this.gestor.alternar(nome);
+                }
                 atualizar();
             });
 
