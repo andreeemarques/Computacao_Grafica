@@ -34,6 +34,8 @@ export class NPC {
             this._direcaoOlhar = true;
         }
 
+        this._somTocando = false;
+
         this._construir();
         cena.add(this.grupo);
 
@@ -47,6 +49,16 @@ export class NPC {
         // Cone de visão (visual debug — pode remover se não quiseres ver)
         this._criarConeVisao(cena);
         this._criarSinalAlerta();
+
+        // Som de alerta
+        this.audioListener = new THREE.AudioListener();
+        this.grupo.add(this.audioListener);
+        this.somAlerta = new THREE.Audio(this.audioListener);
+        const audioLoader = new THREE.AudioLoader();
+        audioLoader.load('VideoAlerta.mp4', (buffer) => {
+            this.somAlerta.setBuffer(buffer);
+            this.somAlerta.setVolume(0.5);
+        });
     }
 
     // ══════════════════════════════════════════
@@ -517,24 +529,42 @@ _atualizarCone() {
 
         this.sinalAlerta.scale.set(escala * 1.0, escala * 1.0, escala * 1.0);
 
-    } else if (this.estado === 'investigar') {
-        this._coneMatFill.color.set(0xff8800);
-        this._coneMatFill.opacity = 0.13;
-        this._coneMatWire.color.set(0xffaa00);
+            // Toca som de alerta se não estiver tocando
+            if (!this._somTocando && this.somAlerta.buffer) {
+                this.somAlerta.play();
+                this._somTocando = true;
+            }
 
-        // Esconde gradualmente ao sair do alerta
-        this.sinalAlerta.visible = false;
-        this._tempoSinal = 0;
+        } else if (this.estado === 'investigar') {
+            this._coneMatFill.color.set(0xff8800);
+            this._coneMatFill.opacity = 0.13;
+            this._coneMatWire.color.set(0xffaa00);
 
-    } else {
-        this._coneMatFill.color.set(0xffff00);
-        this._coneMatFill.opacity = 0.08;
-        this._coneMatWire.color.set(0xffdd00);
+            // Esconde gradualmente ao sair do alerta
+            this.sinalAlerta.visible = false;
+            this._tempoSinal = 0;
 
-        this.sinalAlerta.visible = false;
-        this._tempoSinal = 0;
+            // Para o som
+            if (this._somTocando) {
+                this.somAlerta.stop();
+                this._somTocando = false;
+            }
+
+        } else {
+            this._coneMatFill.color.set(0xffff00);
+            this._coneMatFill.opacity = 0.08;
+            this._coneMatWire.color.set(0xffdd00);
+
+            this.sinalAlerta.visible = false;
+            this._tempoSinal = 0;
+
+            // Para o som
+            if (this._somTocando) {
+                this.somAlerta.stop();
+                this._somTocando = false;
+            }
+        }
     }
-}
 
     // ══════════════════════════════════════════
     // Mover para um ponto destino
