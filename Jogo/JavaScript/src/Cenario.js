@@ -31,12 +31,15 @@ export class Cenario
     
         _adicionarSkybox(cena) {
             const loader    = new THREE.TextureLoader();
-            const faces     = ['posx', 'negx', 'posy', 'negy', 'posz', 'negz'];
-            const materiais = faces.map(f => new THREE.MeshBasicMaterial({
-                map:  loader.load(`./Skybox/${f}.jpg`),
-                side: THREE.BackSide
-            }));
-            const skybox = new THREE.Mesh(new THREE.BoxGeometry(1000, 1000, 1000), materiais);
+            const materiais = [
+                new THREE.MeshBasicMaterial({ map: loader.load(`./Skybox/Face0.png`), side: THREE.BackSide }),
+                new THREE.MeshBasicMaterial({ map: loader.load(`./Skybox/Face3.png`), side: THREE.BackSide }),
+                new THREE.MeshBasicMaterial({ map: loader.load(`./Skybox/Face_de_cima.png`), side: THREE.BackSide }),
+                new THREE.MeshBasicMaterial({ map: loader.load(`./Skybox/Face_do_chao.png`), side: THREE.BackSide }),
+                new THREE.MeshBasicMaterial({ map: loader.load(`./Skybox/Face1.png`), side: THREE.BackSide }),
+                new THREE.MeshBasicMaterial({ map: loader.load(`./Skybox/Face2.png`), side: THREE.BackSide })
+            ];
+            const skybox = new THREE.Mesh(new THREE.BoxGeometry(1500, 1500, 1500), materiais);
             cena.add(skybox);
             return skybox;
         }
