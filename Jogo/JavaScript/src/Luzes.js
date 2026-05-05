@@ -54,9 +54,17 @@ export class GestorLuzes {
             new PosteIluminacao(cena, -15, 20, 0xffaa44, 20, 25),
         ];
 
-        // Registrar colisões para os postes
+        // Registrar colisões para os postes (apenas base e fuste)
         this.postes.forEach(poste => {
-            this.gc.registar(poste.grupo);
+            const pos = poste.grupo.position;
+            // Base: raio 0.25, altura 0.3, centro y=0.15 -> y de 0 a 0.3
+            const baseMin = new THREE.Vector3(pos.x - 0.25, pos.y, pos.z - 0.25);
+            const baseMax = new THREE.Vector3(pos.x + 0.25, pos.y + 0.3, pos.z + 0.25);
+            this.gc.registarBox(baseMin, baseMax);
+            // Fuste: raio 0.09, altura 7, centro y=3.8 -> y de 0.3 a 7.3
+            const fusteMin = new THREE.Vector3(pos.x - 0.09, pos.y + 0.3, pos.z - 0.09);
+            const fusteMax = new THREE.Vector3(pos.x + 0.09, pos.y + 7.3, pos.z + 0.09);
+            this.gc.registarBox(fusteMin, fusteMax);
         });
     }
 
