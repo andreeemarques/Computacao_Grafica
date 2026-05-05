@@ -46,6 +46,7 @@ export class NPC {
 
         // Cone de visão (visual debug — pode remover se não quiseres ver)
         this._criarConeVisao(cena);
+        this._criarSinalAlerta();
     }
 
     // ══════════════════════════════════════════
@@ -335,6 +336,7 @@ export class NPC {
         this.coneVisao.rotation.x = -Math.PI / 2;
         // Desloca para que o vértice fique na cabeça do NPC
         this.coneVisao.position.set(0, 1.8, this.distanciaVisao / 2);
+        this.coneVisao.visible = false;
         this.grupo.add(this.coneVisao);
 
         // Linha de contorno (wireframe) para ser mais visível
@@ -343,6 +345,7 @@ export class NPC {
         const wire = new THREE.LineSegments(geoWire, matWire);
         wire.rotation.x = -Math.PI / 2;
         wire.position.set(0, 1.8, this.distanciaVisao / 2);
+        wire.visible = false;
         this.grupo.add(wire);
 
         // Guarda referências para mudar cor no alerta
@@ -445,24 +448,93 @@ export class NPC {
         return true;
     }
 
+    _criarSinalAlerta() {
+    // Sprite "!" em canvas
+    const canvas = document.createElement('canvas');
+    canvas.width  = 64;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+
+    // Fundo amarelo arredondado
+    ctx.fillStyle = '#ffdd00';
+    ctx.beginPath();
+    ctx.roundRect(4, 4, 56, 56, 10);
+    ctx.fill();
+
+    // Borda escura
+    ctx.strokeStyle = '#222200';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.roundRect(4, 4, 56, 56, 10);
+    ctx.stroke();
+
+    // "!"
+    ctx.fillStyle = '#111100';
+    ctx.font = 'bold 42px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('!', 32, 30, 60);
+
+    // Ponto do "!"
+    /*ctx.beginPath();
+    ctx.arc(32, 52, 4, 0, Math.PI * 2);
+    ctx.fill();*/
+
+    const textura = new THREE.CanvasTexture(canvas);
+    const material = new THREE.SpriteMaterial({
+        map:         textura,
+        transparent: true,
+        depthTest:   false, // aparece sempre por cima
+    });
+
+    this.sinalAlerta = new THREE.Sprite(material);
+    this.sinalAlerta.scale.set(1.0, 1.0, 1.0);
+    this.sinalAlerta.position.set(0, 2.8, 0); // acima da cabeça
+    this.sinalAlerta.visible = false;
+    this.grupo.add(this.sinalAlerta);
+
+    // Para a animação de escala
+    this._tempoSinal = 0;
+}
+
     // ══════════════════════════════════════════
     // Atualizar cor do cone consoante o estado
     // ══════════════════════════════════════════
-    _atualizarCone() {
-        if (this.estado === 'alerta') {
-            this._coneMatFill.color.set(0xff2200);
-            this._coneMatFill.opacity = 0.18;
-            this._coneMatWire.color.set(0xff4400);
-        } else if (this.estado === 'investigar') {
-            this._coneMatFill.color.set(0xff8800);
-            this._coneMatFill.opacity = 0.13;
-            this._coneMatWire.color.set(0xffaa00);
-        } else {
-            this._coneMatFill.color.set(0xffff00);
-            this._coneMatFill.opacity = 0.08;
-            this._coneMatWire.color.set(0xffdd00);
-        }
+_atualizarCone() {
+    if (this.estado === 'alerta') {
+        this._coneMatFill.color.set(0xff2200);
+        this._coneMatFill.opacity = 0.18;
+        this._coneMatWire.color.set(0xff4400);
+
+        // Mostra e anima o sinal
+        this.sinalAlerta.visible = true;
+        this._tempoSinal += 0.016;
+
+        // Animação: aparece com "pop" e depois pulsa subtilmente
+        const escala = this._tempoSinal < 0.15
+            ? (this._tempoSinal / 0.15) * 1.3  // cresce rápido
+            : 1.0 + Math.sin(this._tempoSinal * 8) * 0.06; // pulsa
+
+        this.sinalAlerta.scale.set(escala * 1.0, escala * 1.0, escala * 1.0);
+
+    } else if (this.estado === 'investigar') {
+        this._coneMatFill.color.set(0xff8800);
+        this._coneMatFill.opacity = 0.13;
+        this._coneMatWire.color.set(0xffaa00);
+
+        // Esconde gradualmente ao sair do alerta
+        this.sinalAlerta.visible = false;
+        this._tempoSinal = 0;
+
+    } else {
+        this._coneMatFill.color.set(0xffff00);
+        this._coneMatFill.opacity = 0.08;
+        this._coneMatWire.color.set(0xffdd00);
+
+        this.sinalAlerta.visible = false;
+        this._tempoSinal = 0;
     }
+}
 
     // ══════════════════════════════════════════
     // Mover para um ponto destino
