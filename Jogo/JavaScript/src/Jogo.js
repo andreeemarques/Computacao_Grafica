@@ -13,7 +13,7 @@ export class Jogo
         this.cena      = new THREE.Scene();
         this.renderer  = this._criarRenderer();
         this.gestorColisoes   = new GestorColisoes();
-        this.gestorLuzes     = new GestorLuzes(this.cena);
+        this.gestorLuzes     = new GestorLuzes(this.cena, this.gestorColisoes);
         this.cenario          = new Cenario(this.cena, this.gestorColisoes); // ← passar
         this.jogador          = new Jogador(this.cena, this.gestorColisoes); // ← passar
         this.cameraManager = new CamaraManager(this.renderer);
@@ -28,12 +28,26 @@ export class Jogo
         );
 
           this.gestorNPCs.adicionar([
-            { x: 36, z: 20 },
-            { x: 36, z: 45 },
+            { x: 36, z: 16 },
+            { x: 36, z: 40 },
+            { x: 29, z: 40 },
+            { x: 29, z: 16 },
         ]);
         this.gestorNPCs.adicionar([
-            { x: 46, z: 20 },
-            { x: 46, z: 45 },
+            { x: 48, z: 16 },
+            { x: 48, z: 41 },
+            { x: 40, z: 41},
+            { x: 40, z: 16},
+        ]);
+        this.gestorNPCs.adicionar([
+            {x:12, z:18},
+        ]);
+        this.gestorNPCs.adicionar([
+            {x:-10, z:16},
+            {x:8, z:16},
+            {x:8, z:48},
+            {x:-32, z:48},
+            {x:-32, z:16},
         ]);
 
         this._registarEventos();

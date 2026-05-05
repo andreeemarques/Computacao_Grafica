@@ -16,16 +16,23 @@ export class NPC {
 
         // Campo de visão
         this.anguloVisao     = Math.PI / 3;   // 60° de cada lado (120° total)
-        this.distanciaVisao  = 10;
+        this.distanciaVisao  = 13;
         this.jogadorDetectado = false;
 
         // Gestor de colisões
         this.gestorColisoes = gestorColisoes;
 
         // Estado
-        this.estado = 'patrulha'; // 'patrulha' | 'alerta' | 'investigar'
+        this.estado = 'patrulha'; // 'patrulha' | 'alerta' | 'investigar' | 'estacionario'
         this._tempoAlerta    = 0;
         this._posUltimaVista = null;
+
+        this.estacionario = this.pontos.length === 1;
+        if (this.estacionario) {
+            this.estado = 'estacionario';
+            this._tempoOlhar = 0;
+            this._direcaoOlhar = true;
+        }
 
         this._construir();
         cena.add(this.grupo);
@@ -543,7 +550,7 @@ export class NPC {
                 this._tempoAlerta -= 0.016;
                 if (this._tempoAlerta <= 0) {
                     // Perdeu o jogador — vai investigar o último sítio visto
-                    this.estado = detectado ? 'alerta' : 'investigar';
+                    this.estado = detectado ? 'alerta' : (this.estacionario ? 'estacionario' : 'investigar');
                 }
                 break;
             }
@@ -561,11 +568,29 @@ export class NPC {
                     if (chegou) {
                         // Chegou ao sítio — volta à patrulha
                         this._posUltimaVista = null;
-                        this.estado = 'patrulha';
+                        this.estado = this.estacionario ? 'estacionario' : 'patrulha';
                     }
                 } else {
-                    this.estado = 'patrulha';
+                    this.estado = this.estacionario ? 'estacionario' : 'patrulha';
                 }
+                break;
+            }
+
+            case 'estacionario': {
+                if (detectado) {
+                    this.estado = 'alerta';
+                    this._tempoAlerta = 3.0;
+                    this._posUltimaVista = posJogador.clone();
+                    break;
+                }
+                this._tempoOlhar += 0.016;
+                if (this._tempoOlhar >= 3) {
+                    this._direcaoOlhar = !this._direcaoOlhar;
+                    this._tempoOlhar = 0;
+                }
+                const angulo = this._direcaoOlhar ? Math.PI / 6 : -Math.PI / 6;
+                this.grupo.rotation.y = angulo;
+                this._animar(false);
                 break;
             }
         }
