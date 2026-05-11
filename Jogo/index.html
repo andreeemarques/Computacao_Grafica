@@ -306,7 +306,13 @@
 
         function voltarParaMenu() {
             fecharPainel('panel-missao-concluida');
-            document.getElementById('menu').style.display = 'block';
+            const menu = document.getElementById('menu');
+            menu.style.display = 'flex';
+
+            const painelLuzes = document.getElementById('painel-luzes');
+            if (painelLuzes) painelLuzes.style.display = 'none';
+
+            document.dispatchEvent(new CustomEvent('voltarAoMenu'));
         }
 
         document.getElementById('btn-manual').addEventListener('click', () => {

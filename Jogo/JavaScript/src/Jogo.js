@@ -19,6 +19,9 @@ export class Jogo
         this.cameraManager = new CamaraManager(this.renderer, this.gestorColisoes);
         this.uiLuzes         = new UILuzes(this.gestorLuzes);
         this.teclasPressionadas = new Set();
+        this._loopId = null;
+        this._onKeyDown = this._onKeyDown.bind(this);
+        this._onKeyUp = this._onKeyUp.bind(this);
         this.gestorNPCs = new GestorNPCs(this.cena, this.gestorColisoes);
         this.missaoConcluida = false;
         this.pontoMissao = {
@@ -70,23 +73,26 @@ export class Jogo
     }
 
     _registarEventos() {
-        document.addEventListener('keydown', (event) => {
-            if (event.which === 67) { // C
-                this.cameraManager.alternar();
-            }
-            else if (event.key === 'l' || event.key === 'L')
-            {
-                const p = document.getElementById('painel-luzes');
-                p.style.display = p.style.display === 'none' ? 'block' : 'none';
-            } else if ([87, 83, 65, 68].includes(event.which)) {
-                this.teclasPressionadas.add(event.which);
-            }
-        }, false);
-        document.addEventListener('keyup', (event) => {
-            if ([87, 83, 65, 68].includes(event.which)) {
-                this.teclasPressionadas.delete(event.which);
-            }
-        }, false);
+        document.addEventListener('keydown', this._onKeyDown, false);
+        document.addEventListener('keyup', this._onKeyUp, false);
+    }
+
+    _onKeyDown(event) {
+        if (event.which === 67) { // C
+            this.cameraManager.alternar();
+        }
+        else if (event.key === 'l' || event.key === 'L') {
+            const p = document.getElementById('painel-luzes');
+            if (p) p.style.display = p.style.display === 'none' ? 'block' : 'none';
+        } else if ([87, 83, 65, 68].includes(event.which)) {
+            this.teclasPressionadas.add(event.which);
+        }
+    }
+
+    _onKeyUp(event) {
+        if ([87, 83, 65, 68].includes(event.which)) {
+            this.teclasPressionadas.delete(event.which);
+        }
     }
 
     _verificarMissao() {
@@ -101,6 +107,22 @@ export class Jogo
         }
     }
 
+    destruir() {
+        if (this._loopId !== null) {
+            cancelAnimationFrame(this._loopId);
+            this._loopId = null;
+        }
+        document.removeEventListener('keydown', this._onKeyDown, false);
+        document.removeEventListener('keyup', this._onKeyUp, false);
+        if (this.renderer && this.renderer.domElement) {
+            this.renderer.domElement.remove();
+        }
+        const painelLuzes = document.getElementById('painel-luzes');
+        if (painelLuzes) {
+            painelLuzes.remove();
+        }
+    }
+
     _loop() {
         this.jogador.mover(this.cameraManager.angulo, Array.from(this.teclasPressionadas));
         this.jogador.atualizar(this.teclasPressionadas.size > 0);
@@ -110,7 +132,7 @@ export class Jogo
         // Fazer a skybox seguir a câmara
         this.cenario.skybox.position.copy(this.cameraManager.camara.position);
         this.renderer.render(this.cena, this.cameraManager.camara);
-        requestAnimationFrame(this._loop.bind(this));
+        this._loopId = requestAnimationFrame(this._loop.bind(this));
         this.gestorNPCs.atualizar(this.jogador.posicao);
     }
 }

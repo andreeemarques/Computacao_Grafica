@@ -5,7 +5,8 @@ export class UILuzes {
     }
 
     _construirUI() {
-        const painel = document.createElement('div');
+        this.painel = document.createElement('div');
+        const painel = this.painel;
         painel.id = 'painel-luzes';
         painel.style.cssText = `
             position: fixed;
