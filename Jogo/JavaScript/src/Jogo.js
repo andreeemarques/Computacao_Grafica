@@ -43,11 +43,11 @@ export class Jogo
             {x:12, z:18},
         ]);
         this.gestorNPCs.adicionar([
-            {x:-10, z:16},
-            {x:8, z:16},
-            {x:8, z:48},
-            {x:-32, z:48},
             {x:-32, z:16},
+            {x:-32, z:48},
+            {x:8, z:48},
+            {x:8, z:16},
+            {x:-10, z:16},
         ]);
 
         this._registarEventos();
