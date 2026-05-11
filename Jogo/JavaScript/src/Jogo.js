@@ -16,10 +16,15 @@ export class Jogo
         this.gestorLuzes     = new GestorLuzes(this.cena, this.gestorColisoes);
         this.cenario          = new Cenario(this.cena, this.gestorColisoes); // ← passar
         this.jogador          = new Jogador(this.cena, this.gestorColisoes); // ← passar
-        this.cameraManager = new CamaraManager(this.renderer);
+        this.cameraManager = new CamaraManager(this.renderer, this.gestorColisoes);
         this.uiLuzes         = new UILuzes(this.gestorLuzes);
         this.teclasPressionadas = new Set();
         this.gestorNPCs = new GestorNPCs(this.cena, this.gestorColisoes);
+        this.missaoConcluida = false;
+        this.pontoMissao = {
+            minX: -14, maxX: -5,
+            minZ: 10,  maxZ: 13
+        };
 
         // Colisão manual para a cabine
         this.gestorColisoes.registarBox(
@@ -84,13 +89,24 @@ export class Jogo
         }, false);
     }
 
-    
+    _verificarMissao() {
+        if (this.missaoConcluida) return;
+
+        const { x, z } = this.jogador.posicao;
+        const { minX, maxX, minZ, maxZ } = this.pontoMissao;
+        if (x >= minX && x <= maxX && z >= minZ && z <= maxZ) {
+            this.missaoConcluida = true;
+            const painel = document.getElementById('panel-missao-concluida');
+            if (painel) painel.classList.add('active');
+        }
+    }
 
     _loop() {
         this.jogador.mover(this.cameraManager.angulo, Array.from(this.teclasPressionadas));
         this.jogador.atualizar(this.teclasPressionadas.size > 0);
         this.jogador.orientarParaCamera(this.cameraManager.camara);
         this.cameraManager.atualizar(this.jogador.posicao);
+        this._verificarMissao();
         // Fazer a skybox seguir a câmara
         this.cenario.skybox.position.copy(this.cameraManager.camara.position);
         this.renderer.render(this.cena, this.cameraManager.camara);

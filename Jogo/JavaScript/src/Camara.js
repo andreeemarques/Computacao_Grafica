@@ -3,10 +3,10 @@ import { PointerLockControls } from 'PointerLockControls';
 
 export class CamaraTerceirasPessoas
 {
-    constructor(renderer) {
+    constructor(renderer, gestorColisoes) {
             this.camara   = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 5000);
             this.controls = new PointerLockControls(this.camara, renderer.domElement);
-    
+            this.gestorColisoes = gestorColisoes;
             this.distancia = 10;
             this.altura    = 1;
             this._angulo   = 0;
@@ -39,12 +39,64 @@ export class CamaraTerceirasPessoas
             const offsetZ = this.distancia * Math.cos(this._angulo) * Math.cos(this.pitch);
             const offsetY = this.distancia * Math.sin(this.pitch);
     
-            this.camara.position.set(
+            const idealPosicao = new THREE.Vector3(
                 posicaoJogador.x + offsetX,
                 posicaoJogador.y + this.altura + offsetY,
                 posicaoJogador.z + offsetZ
             );
+
+            const finalPosicao = this._resolverColisao(posicaoJogador, idealPosicao);
+            this.camara.position.copy(finalPosicao);
             this.camara.lookAt(posicaoJogador);
+        }
+
+        _cameraBox(posicao) {
+            const raio = 0.25;
+            return new THREE.Box3(
+                new THREE.Vector3(posicao.x - raio, posicao.y - raio, posicao.z - raio),
+                new THREE.Vector3(posicao.x + raio, posicao.y + raio, posicao.z + raio)
+            );
+        }
+
+        _resolverColisao(origem, destino) {
+            if (!this.gestorColisoes) return destino;
+
+            const minHeight = 0.45;
+            const alvo = destino.clone();
+            if (alvo.y < minHeight) alvo.y = minHeight;
+
+            if (!this.gestorColisoes.colideBox(this._cameraBox(alvo))) {
+                return alvo;
+            }
+
+            const direcao = alvo.clone().sub(origem);
+            const comprimento = direcao.length();
+            if (comprimento === 0) return alvo;
+
+            const raioSeguranca = 0.35;
+            const direcaoNormalizada = direcao.clone().normalize();
+            const raio = new THREE.Ray(origem.clone(), direcaoNormalizada);
+            const tempPonto = new THREE.Vector3();
+            let distanciaMaisPerto = Infinity;
+
+            for (const obstaculo of this.gestorColisoes.obstaculos) {
+                const ponto = raio.intersectBox(obstaculo, tempPonto);
+                if (ponto) {
+                    const distancia = ponto.distanceTo(origem);
+                    if (distancia >= 0 && distancia < distanciaMaisPerto && distancia <= comprimento) {
+                        distanciaMaisPerto = distancia;
+                    }
+                }
+            }
+
+            if (distanciaMaisPerto === Infinity) {
+                return alvo;
+            }
+
+            const distanciaSegura = Math.max(0.8, distanciaMaisPerto - raioSeguranca);
+            const posicaoSegura = origem.clone().add(direcaoNormalizada.multiplyScalar(distanciaSegura));
+            if (posicaoSegura.y < minHeight) posicaoSegura.y = minHeight;
+            return posicaoSegura;
         }
     
         get angulo() {
@@ -77,9 +129,9 @@ export class CamaraTopDown
 }
 
 export class CamaraManager {
-    constructor(renderer) {
-        this.cameraTerceiraPessoa = new CamaraTerceirasPessoas(renderer); // ← nome correto
-        this.cameraTopDown        = new CamaraTopDown(renderer);          // ← nome correto
+    constructor(renderer, gestorColisoes) {
+        this.cameraTerceiraPessoa = new CamaraTerceirasPessoas(renderer, gestorColisoes); // ← nome correto
+        this.cameraTopDown        = new CamaraTopDown(renderer);                           // ← nome correto
         this.cameraAtual          = this.cameraTerceiraPessoa;
     }
 

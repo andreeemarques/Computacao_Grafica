@@ -5,6 +5,7 @@ import { _adicionarContentores } from './objetos/Contentores.js';
 import { adicionarEdificios } from './objetos/Edificios.js';
 import { _adicionarHalfWall } from './objetos/HalfWall.js';
 import { _adicionarParedesArea } from './objetos/Paredes.js';
+import { criarTexturaChao } from './texturas/TexturaBase.js';
 
 export class Cenario
 {
@@ -21,9 +22,16 @@ export class Cenario
         }
     
         _adicionarChao(cena) {
+            const textura = criarTexturaChao();
+            textura.repeat.set(25, 25); // 1 laje a cada 4 unidades no plano 100x100
+
             const geometria = new THREE.PlaneGeometry(100, 100);
-            const material  = new THREE.MeshStandardMaterial({ color: 0x888888 });
-            const mesh      = new THREE.Mesh(geometria, material);
+            const material  = new THREE.MeshStandardMaterial({
+                map:       textura,
+                roughness: 0.9,
+                metalness: 0.02,
+            });
+            const mesh = new THREE.Mesh(geometria, material);
             mesh.rotation.x    = -Math.PI / 2;
             mesh.receiveShadow = true;
             cena.add(mesh);
@@ -39,7 +47,7 @@ export class Cenario
                 new THREE.MeshBasicMaterial({ map: loader.load(`./Skybox/Face2.png`), side: THREE.BackSide }),
                 new THREE.MeshBasicMaterial({ map: loader.load(`./Skybox/Face1.png`), side: THREE.BackSide })
             ];
-            const skybox = new THREE.Mesh(new THREE.BoxGeometry(1500, 1500, 1500), materiais);
+            const skybox = new THREE.Mesh(new THREE.BoxGeometry(170, 170, 170), materiais);
             cena.add(skybox);
             return skybox;
         }

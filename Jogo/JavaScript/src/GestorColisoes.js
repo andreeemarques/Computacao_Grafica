@@ -20,4 +20,11 @@ export class GestorColisoes {
         }
         return false;
     }
+
+    colideBox(box) {
+        for (const obstaculo of this.obstaculos) {
+            if (box.intersectsBox(obstaculo)) return true;
+        }
+        return false;
+    }
 }

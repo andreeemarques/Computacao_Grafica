@@ -275,6 +275,19 @@
         </div>
     </div>
 
+    <!-- ── PAINEL: MISSÃO CONCLUÍDA ── -->
+    <div class="panel" id="panel-missao-concluida">
+        <div class="panel-box">
+            <div class="panel-title">// Missão Concluída</div>
+            <div class="panel-content">
+                Parabéns, agente!<br><br>
+                Chegaste à porta do segundo prédio. A missão foi concluída.
+                Continua a explorar ou fecha este painel para voltar ao menu inicial.
+            </div>
+            <button class="panel-close" onclick="voltarParaMenu()">[ Voltar ao menu ]</button>
+        </div>
+    </div>
+
     <script async src="https://unpkg.com/es-module-shims@2.0.10/dist/es-module-shims.js"></script>
     <script type="importmap">
     {
@@ -289,6 +302,11 @@
     <script>
         function fecharPainel(id) {
             document.getElementById(id).classList.remove('active');
+        }
+
+        function voltarParaMenu() {
+            fecharPainel('panel-missao-concluida');
+            document.getElementById('menu').style.display = 'block';
         }
 
         document.getElementById('btn-manual').addEventListener('click', () => {
