@@ -25,7 +25,7 @@ export class Cenario
             const textura = criarTexturaChao();
             textura.repeat.set(25, 25); // 1 laje a cada 4 unidades no plano 100x100
 
-            const geometria = new THREE.PlaneGeometry(100, 100);
+            const geometria = new THREE.PlaneGeometry(200, 200);
             const material  = new THREE.MeshStandardMaterial({
                 map:       textura,
                 roughness: 0.9,

@@ -8,7 +8,7 @@ export class CamaraTerceirasPessoas {
         this.gestorColisoes = gestorColisoes;
         this.distancia = 10.0;
         this.altura = 1.0;
-        this.minDistance = 2.8;
+        this.minDistance = 0.7;
         this.maxDistance = 10.0;
         this._angulo = 0;
         this.pitch = 0;
