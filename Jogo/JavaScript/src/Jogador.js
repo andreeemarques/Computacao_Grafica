@@ -457,41 +457,43 @@ export class Jogador {
     mover(cameraAngle, teclas) {
         const forward = new THREE.Vector3(-Math.sin(cameraAngle), 0, -Math.cos(cameraAngle));
         const right   = new THREE.Vector3(-Math.cos(cameraAngle), 0,  Math.sin(cameraAngle));
-        const passo   = 0.10;
+        const velocidade = 0.15;
 
         let delta = new THREE.Vector3();
         teclas.forEach(tecla => {
-            if (tecla === 87) delta.add(forward.clone().multiplyScalar( passo));
-            if (tecla === 83) delta.add(forward.clone().multiplyScalar(-passo));
-            if (tecla === 65) delta.add(right.clone().multiplyScalar(  passo));
-            if (tecla === 68) delta.add(right.clone().multiplyScalar( -passo));
+            if (tecla === 87) delta.add(forward);
+            if (tecla === 83) delta.sub(forward);
+            if (tecla === 65) delta.add(right);
+            if (tecla === 68) delta.sub(right);
         });
-
-        //const emMovimento = delta.lengthSq() > 0;
-        //this.atualizar(emMovimento);
 
         if (delta.lengthSq() === 0) return;
 
+        delta.normalize().multiplyScalar(velocidade);
         this.ultimaDirecao.copy(delta).normalize();
-        const posAtual = this.grupo.position.clone();
 
+        const posAtual = this.grupo.position.clone();
         const posTotal = posAtual.clone().add(delta);
         if (!this.gestorColisoes.colide(this._boxNaPosicao(posTotal))) {
             this.grupo.position.copy(posTotal);
             return;
         }
 
-        const posSoX = posAtual.clone();
-        posSoX.x += delta.x;
+        const posSoX = posAtual.clone().add(new THREE.Vector3(delta.x, 0, 0));
         if (!this.gestorColisoes.colide(this._boxNaPosicao(posSoX))) {
             this.grupo.position.copy(posSoX);
             return;
         }
 
-        const posSoZ = posAtual.clone();
-        posSoZ.z += delta.z;
+        const posSoZ = posAtual.clone().add(new THREE.Vector3(0, 0, delta.z));
         if (!this.gestorColisoes.colide(this._boxNaPosicao(posSoZ))) {
             this.grupo.position.copy(posSoZ);
+            return;
+        }
+
+        const posParcial = posAtual.clone().add(delta.clone().multiplyScalar(0.5));
+        if (!this.gestorColisoes.colide(this._boxNaPosicao(posParcial))) {
+            this.grupo.position.copy(posParcial);
         }
     }
 

@@ -124,6 +124,7 @@ export class Jogo
     }
 
     _loop() {
+        this.gestorColisoes.atualizar();
         this.jogador.mover(this.cameraManager.angulo, Array.from(this.teclasPressionadas));
         this.jogador.atualizar(this.teclasPressionadas.size > 0);
         this.jogador.orientarParaCamera(this.cameraManager.camara);
