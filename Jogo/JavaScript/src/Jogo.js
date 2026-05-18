@@ -11,6 +11,7 @@ export class Jogo
 {
     constructor() {
         this.cena      = new THREE.Scene();
+        this.clock    = new THREE.Clock(); // aqui adicionei o clock para o delta
         this.renderer  = this._criarRenderer();
         this.gestorColisoes   = new GestorColisoes();
         this.gestorLuzes     = new GestorLuzes(this.cena, this.gestorColisoes);
@@ -113,10 +114,13 @@ export class Jogo
         if (!emAlerta) return;
 
         this.missaoFalhada = true;
+
+        this.cenario.sirenes.forEach(s => s.ligar());
+
         setTimeout(() => {
             const painel = document.getElementById('panel-missao-falhada');
             if (painel) painel.classList.add('active');
-        }, 800);
+        }, 2500);
     }
 
     destruir() {
@@ -136,13 +140,16 @@ export class Jogo
     }
 
     _loop() {
+        const delta = this.clock.getDelta();
+
         this.gestorColisoes.atualizar();
         this.jogador.mover(this.cameraManager.angulo, Array.from(this.teclasPressionadas));
         this.jogador.atualizar(this.teclasPressionadas.size > 0);
         this.jogador.orientarParaCamera(this.cameraManager.camara);
         this.cameraManager.atualizar(this.jogador.posicao);
         this._verificarMissao();
-        // Fazer a skybox seguir a câmara
+        this.cenario.sirenes.forEach(s => s.update(delta));
+
         this.cenario.skybox.position.copy(this.cameraManager.camara.position);
         this.renderer.render(this.cena, this.cameraManager.camara);
         this._loopId = requestAnimationFrame(this._loop.bind(this));
