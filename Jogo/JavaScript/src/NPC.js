@@ -34,6 +34,9 @@ export class NPC {
             this._direcaoOlhar = true;
         }
 
+        this.boxColisao = new THREE.Box3();
+        this._atualizarBoxColisao();
+
         this._somTocando = false;
 
         this._construir();
@@ -566,6 +569,24 @@ _atualizarCone() {
         }
     }
 
+    _atualizarBoxColisao() {
+        const p = this.grupo.position;
+        const r = 0.35;
+        this.boxColisao.set(
+            new THREE.Vector3(p.x - r, p.y,       p.z - r),
+            new THREE.Vector3(p.x + r, p.y + 1.9, p.z + r)
+        );
+    }
+
+    _colideComJogador(posJogador) {
+        const raio = 0.8;
+        const boxJogador = new THREE.Box3(
+            new THREE.Vector3(posJogador.x - raio, posJogador.y - 0.5, posJogador.z - raio),
+            new THREE.Vector3(posJogador.x + raio, posJogador.y + 0.5, posJogador.z + raio)
+        );
+        return this.boxColisao.intersectsBox(boxJogador);
+    }
+
     // ══════════════════════════════════════════
     // Mover para um ponto destino
     // ══════════════════════════════════════════
@@ -587,7 +608,7 @@ _atualizarCone() {
                 new THREE.Vector3(pos.x - raio, pos.y + 0.05, pos.z - raio),
                 new THREE.Vector3(pos.x + raio, pos.y + 1.90, pos.z + raio)
             );
-            return !this.gestorColisoes.colide(box);
+            return !this.gestorColisoes.colideExcluindo(box, this);
         };
 
         const aplicar = (pos) => {
@@ -614,7 +635,7 @@ _atualizarCone() {
     // Loop principal do NPC
     // ══════════════════════════════════════════
     atualizar(posJogador) {
-        const detectado = this._detectarJogador(posJogador);
+        const detectado = this._detectarJogador(posJogador) || this._colideComJogador(posJogador);
 
         // ── Máquina de estados ─────────────────
         switch (this.estado) {
@@ -698,6 +719,7 @@ _atualizarCone() {
         }
 
         this._atualizarCone();
+        this._atualizarBoxColisao();
         return this.estado === 'alerta'; // retorna true se o jogador foi detetado
     }
 
@@ -725,6 +747,7 @@ export class GestorNPCs {
     adicionar(pontos) {
         const npc = new NPC(this.cena, pontos, this.gestorColisoes);
         this.npcs.push(npc);
+        this.gestorColisoes.registarNPC(npc);
         return npc;
     }
 

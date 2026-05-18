@@ -4,6 +4,7 @@ export class GestorColisoes {
     constructor() {
         this.obstaculos = [];
         this.obstaculosDinamicos = [];
+        this.npcsRegistados = [];
     }
 
     registar(mesh) {
@@ -20,6 +21,10 @@ export class GestorColisoes {
             mesh,
             box: new THREE.Box3().setFromObject(mesh),
         });
+    }
+
+    registarNPC(npc) {
+        this.npcsRegistados.push(npc);
     }
 
     removerDinamico(mesh) {
@@ -46,6 +51,23 @@ export class GestorColisoes {
         }
         for (const entry of this.obstaculosDinamicos) {
             if (box.intersectsBox(entry.box)) return true;
+        }
+        for (const npc of this.npcsRegistados) {
+            if (box.intersectsBox(npc.boxColisao)) return true;
+        }
+        return false;
+    }
+
+    colideExcluindo(box, npcExcluir) {
+        for (const obstaculo of this.obstaculos) {
+            if (box.intersectsBox(obstaculo)) return true;
+        }
+        for (const entry of this.obstaculosDinamicos) {
+            if (box.intersectsBox(entry.box)) return true;
+        }
+        for (const npc of this.npcsRegistados) {
+            if (npc === npcExcluir) continue; // ignora a si próprio
+            if (box.intersectsBox(npc.boxColisao)) return true;
         }
         return false;
     }
