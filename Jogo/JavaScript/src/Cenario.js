@@ -8,6 +8,7 @@ import { _adicionarParedesArea } from './objetos/Paredes.js';
 import { criarTexturaChao } from './texturas/TexturaBase.js';
 import { adicionarDecoracaoExterior } from './objetos/Decoracao.js';
 import { Sirene } from './objetos/Sirene.js';
+import { Chave } from './objetos/Chave.js';
 
 export class Cenario
 {
@@ -26,6 +27,13 @@ export class Cenario
                 new Sirene(cena,  50, 3, 30, { rotacaoParede: 0,             ativo: false }),
                 new Sirene(cena, -12.5, 2.5, 45, { rotacaoParede: -Math.PI / 2,  ativo: false }),
                 new Sirene(cena,  12, 3, 16, { rotacaoParede:  Math.PI / 2,  ativo: false }),
+            ];
+
+            // Chaves para desbloquear a missão
+            this.chaves = [
+                new Chave(cena, 49, 1, 17, 0),        // Canto superior direito (spawning dos NPCs)
+                new Chave(cena, 10, 1, 35, 1),       // Lado esquerdo (perto dos contentores)
+                new Chave(cena, -12.5, 1, 20, 2),     // Atrás da HalfWall
             ];
         }
     

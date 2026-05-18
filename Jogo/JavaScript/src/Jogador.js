@@ -16,6 +16,7 @@ export class Jogador {
         this.ultimaDirecao = new THREE.Vector3(0, 0, 1);
         this.gestorColisoes = gestorColisoes;
         this.mesh = this.grupo;
+        this.boxColisao = this._boxNaPosicao(this.posicao);
     }
 
     // ── Materiais ──────────────────────────────────────────
@@ -366,6 +367,9 @@ export class Jogador {
         const vel   = 8.0;   // velocidade do ciclo
         const dt    = 0.016; // ~60fps
 
+        // Atualizar box de colisão
+        this.boxColisao = this._boxNaPosicao(this.posicao);
+
         if (emMovimento) {
             this._tempoAndar += dt * vel;
         } else {
@@ -447,10 +451,10 @@ export class Jogador {
 
     // ── Colisões ───────────────────────────────────────────
     _boxNaPosicao(posicao) {
-        const raio = 0.45;
+        const raio = 0.6;  // Aumentado para detectar chaves melhor
         return new THREE.Box3(
-            new THREE.Vector3(posicao.x - raio, posicao.y - 0.5, posicao.z - raio),
-            new THREE.Vector3(posicao.x + raio, posicao.y + 0.5, posicao.z + raio)
+            new THREE.Vector3(posicao.x - raio, posicao.y - 0.8, posicao.z - raio),
+            new THREE.Vector3(posicao.x + raio, posicao.y + 0.8, posicao.z + raio)
         );
     }
 

@@ -26,10 +26,17 @@ export class Jogo
         this.gestorNPCs = new GestorNPCs(this.cena, this.gestorColisoes);
         this.missaoConcluida = false;
         this.missaoFalhada   = false;
+        this.chavesApanhadas = new Set(); // Rastrear as chaves que o jogador tem
+        this._tempoMensagemChaves = 0;
+        this._timeoutMensagemChaves = null; // Timeout para esconder a mensagem
+        this._ultimaMensagemPosicao = null; // Rastrear a última vez que mostrou a mensagem
         this.pontoMissao = {
             minX: -14, maxX: -5,
             minZ: 10,  maxZ: 13
         };
+
+        // Criar painel de mensagem de chaves
+        this._criarPainelChaves();
 
         // Colisão manual para a cabine
         this.gestorColisoes.registarBox(
@@ -74,6 +81,67 @@ export class Jogo
         return renderer;
     }
 
+    _criarPainelChaves() {
+        const painel = document.createElement('div');
+        painel.id = 'painel-chaves';
+        painel.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: #ffd700;
+            padding: 30px 40px;
+            border: 3px solid #ffd700;
+            border-radius: 10px;
+            font-family: Arial, sans-serif;
+            font-size: 20px;
+            font-weight: bold;
+            z-index: 1000;
+            display: none;
+            pointer-events: none;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+            transition: opacity 0.3s ease-out;
+            opacity: 0;
+        `;
+        document.body.appendChild(painel);
+        this._painelChaves = painel;
+    }
+
+    _mostrarMensagemChaves(mensagem) {
+        if (!this._painelChaves) return;
+        
+        // Limpar timeout anterior se existir
+        if (this._timeoutMensagemChaves) {
+            clearTimeout(this._timeoutMensagemChaves);
+        }
+        
+        // Mostrar o painel
+        this._painelChaves.textContent = mensagem;
+        this._painelChaves.style.display = 'block';
+        this._painelChaves.style.opacity = '1';
+        
+        // Esconder automaticamente após 4 segundos
+        this._timeoutMensagemChaves = setTimeout(() => {
+            this._painelChaves.style.opacity = '0';
+            setTimeout(() => {
+                this._painelChaves.style.display = 'none';
+            }, 300); // Esperar pela animação de fade out
+        }, 4000);
+    }
+
+    _ocultarMensagemChaves() {
+        if (!this._painelChaves) return;
+        if (this._timeoutMensagemChaves) {
+            clearTimeout(this._timeoutMensagemChaves);
+        }
+        this._painelChaves.style.opacity = '0';
+        setTimeout(() => {
+            this._painelChaves.style.display = 'none';
+        }, 300);
+    }
+
     _registarEventos() {
         document.addEventListener('keydown', this._onKeyDown, false);
         document.addEventListener('keyup', this._onKeyUp, false);
@@ -103,6 +171,19 @@ export class Jogo
         const { x, z } = this.jogador.posicao;
         const { minX, maxX, minZ, maxZ } = this.pontoMissao;
         if (x >= minX && x <= maxX && z >= minZ && z <= maxZ) {
+            // Verificar se o jogador tem as 3 chaves
+            if (this.chavesApanhadas.size < 3) {
+                // Mostrar mensagem apenas se não foi mostrada recentemente
+                const agora = Date.now();
+                if (!this._ultimaMensagemPosicao || agora - this._ultimaMensagemPosicao > 5000) {
+                    this._mostrarMensagemChaves(`⚠ Precisas de apanhar as 3 chaves!\nTens ${this.chavesApanhadas.size}/3`);
+                    this._ultimaMensagemPosicao = agora;
+                }
+                return;
+            } else {
+                this._ocultarMensagemChaves();
+            }
+            
             this.missaoConcluida = true;
             const painel = document.getElementById('panel-missao-concluida');
             if (painel) painel.classList.add('active');
@@ -128,6 +209,9 @@ export class Jogo
             cancelAnimationFrame(this._loopId);
             this._loopId = null;
         }
+        if (this._timeoutMensagemChaves) {
+            clearTimeout(this._timeoutMensagemChaves);
+        }
         document.removeEventListener('keydown', this._onKeyDown, false);
         document.removeEventListener('keyup', this._onKeyUp, false);
         if (this.renderer && this.renderer.domElement) {
@@ -136,6 +220,10 @@ export class Jogo
         const painelLuzes = document.getElementById('painel-luzes');
         if (painelLuzes) {
             painelLuzes.remove();
+        }
+        const painelChaves = document.getElementById('painel-chaves');
+        if (painelChaves) {
+            painelChaves.remove();
         }
     }
 
@@ -148,6 +236,21 @@ export class Jogo
         this.jogador.orientarParaCamera(this.cameraManager.camara);
         this.cameraManager.atualizar(this.jogador.posicao);
         this._verificarMissao();
+        
+        // Atualizar chaves apenas se ainda não foram todas apanhadas
+        if (this.chavesApanhadas.size < 3) {
+            for (const chave of this.cenario.chaves) {
+                chave.update(delta);
+                if (!chave.apanhada && this.jogador.boxColisao && chave.boxColisao) {
+                    if (this.jogador.boxColisao.intersectsBox(chave.boxColisao)) {
+                        this.chavesApanhadas.add(chave.id);
+                        chave.apanhar();
+                        console.log(`✓ Chave ${chave.id + 1} apanhada! (${this.chavesApanhadas.size}/3)`);
+                    }
+                }
+            }
+        }
+        
         this.cenario.sirenes.forEach(s => s.update(delta));
 
         this.cenario.skybox.position.copy(this.cameraManager.camara.position);
