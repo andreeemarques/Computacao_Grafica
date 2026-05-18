@@ -24,6 +24,7 @@ export class Jogo
         this._onKeyUp = this._onKeyUp.bind(this);
         this.gestorNPCs = new GestorNPCs(this.cena, this.gestorColisoes);
         this.missaoConcluida = false;
+        this.missaoFalhada   = false;
         this.pontoMissao = {
             minX: -14, maxX: -5,
             minZ: 10,  maxZ: 13
@@ -107,6 +108,17 @@ export class Jogo
         }
     }
 
+    _verificarDetecao(emAlerta) {
+        if (this.missaoFalhada || this.missaoConcluida) return;
+        if (!emAlerta) return;
+
+        this.missaoFalhada = true;
+        setTimeout(() => {
+            const painel = document.getElementById('panel-missao-falhada');
+            if (painel) painel.classList.add('active');
+        }, 800);
+    }
+
     destruir() {
         if (this._loopId !== null) {
             cancelAnimationFrame(this._loopId);
@@ -134,6 +146,7 @@ export class Jogo
         this.cenario.skybox.position.copy(this.cameraManager.camara.position);
         this.renderer.render(this.cena, this.cameraManager.camara);
         this._loopId = requestAnimationFrame(this._loop.bind(this));
-        this.gestorNPCs.atualizar(this.jogador.posicao);
+        const emAlerta = this.gestorNPCs.atualizar(this.jogador.posicao);
+        this._verificarDetecao(emAlerta);
     }
 }

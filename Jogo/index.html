@@ -290,6 +290,23 @@
         </div>
     </div>
 
+    <div class="panel" id="panel-missao-falhada">
+        <div class="panel-box">
+            <div class="panel-title" style="color: #ff2200; border-bottom-color: rgba(255,34,0,0.25);">// Missão Falhada</div>
+            <div class="panel-content" style="color: rgba(255,80,0,0.85);">
+                Foste detetado, agente.<br><br>
+                A tua posição foi comprometida. Os inimigos estão em alerta máximo
+                e a operação foi cancelada.<br><br>
+                Estado da missão: <span style="color:#ff2200; letter-spacing:2px;">FALHA OPERACIONAL</span><br><br>
+                Reagrupa e tenta novamente.
+            </div>
+            <button class="panel-close" style="border-color: rgba(255,34,0,0.35); color: rgba(255,80,0,0.7);"
+                onmouseover="this.style.background='rgba(255,34,0,0.08)'; this.style.color='#ff2200';"
+                onmouseout="this.style.background='transparent'; this.style.color='rgba(255,80,0,0.7)';"
+                onclick="voltarParaMenu()">[ Tentar Novamente ]</button>
+        </div>
+    </div>
+
     <script async src="https://unpkg.com/es-module-shims@2.0.10/dist/es-module-shims.js"></script>
     <script type="importmap">
     {
@@ -308,6 +325,7 @@
 
         function voltarParaMenu() {
             fecharPainel('panel-missao-concluida');
+            fecharPainel('panel-missao-falhada');
             const menu = document.getElementById('menu');
             menu.style.display = 'flex';
 
@@ -328,6 +346,10 @@
         document.getElementById('btn-start').addEventListener('click', () => {
             document.getElementById('menu').style.display = 'none';
             document.dispatchEvent(new CustomEvent('iniciarJogo'));
+        });
+
+        document.addEventListener('missaoFalhada', () => {
+            document.getElementById('panel-missao-falhada').classList.add('active');
         });
     </script>
 </body>
