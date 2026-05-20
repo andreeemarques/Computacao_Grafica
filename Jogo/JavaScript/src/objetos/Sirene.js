@@ -179,7 +179,7 @@ export class Sirene {
         if (!this.ativo) return;
 
         // Rotação contínua do farol
-        this._grupoRotativo.rotation.y += this.velocidade * Math.PI * 2 * delta;
+        this._grupoRotativo.rotation.y += this.velocidade * Math.PI * 1 * delta;
     }
 
     // ─────────────────────────────────────────
