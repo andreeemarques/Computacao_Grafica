@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 export function _adicionarHalfWall(cena, gc) {
-    const alturaHW  = 2.0;   // meia parede ~1m de altura
+    const alturaHW  = 1.5;   // meia parede ~1m de altura
     const espessura = 0.15;
     const comprimento = 9;
 

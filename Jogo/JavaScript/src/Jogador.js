@@ -17,6 +17,9 @@ export class Jogador {
         this.gestorColisoes = gestorColisoes;
         this.mesh = this.grupo;
         this.boxColisao = this._boxNaPosicao(this.posicao);
+
+        this.agachado = false;
+        this._transicaoAgacho = 0; // 0 = em pé, 1 = agachado (lerp suave)
     }
 
     // ── Materiais ──────────────────────────────────────────
@@ -363,105 +366,116 @@ export class Jogador {
     // ── Animação ───────────────────────────────────────────
     // Chamado a cada frame pelo loop principal
     atualizar(emMovimento) {
-        this._emMovimento = emMovimento;
-        const vel   = 8.0;   // velocidade do ciclo
-        const dt    = 0.016; // ~60fps
+       this._emMovimento = emMovimento;
+    const vel = 8.0;
+    const dt  = 0.016;
 
-        // Atualizar box de colisão
-        this.boxColisao = this._boxNaPosicao(this.posicao);
+    // ── Transição suave do agacho ──────────────────────────
+    const alvo = this.agachado ? 1 : 0;
+    const velT = 8.0;
+    this._transicaoAgacho = this.agachado
+        ? Math.min(1, this._transicaoAgacho + dt * velT)
+        : Math.max(0, this._transicaoAgacho - dt * velT);
+    const a = this._transicaoAgacho;
 
-        if (emMovimento) {
-            this._tempoAndar += dt * vel;
-        } else {
-            // Retorno suave à pose de repouso
-            this._tempoAndar *= 0.85;
-            if (Math.abs(this._tempoAndar) < 0.001) this._tempoAndar = 0;
-        }
+    // ── Box de colisão ────────────────────────────────────
+    this.boxColisao = this._boxNaPosicao(this.posicao);
 
-        const t = this._tempoAndar;
-        const s = Math.sin(t);
-        const c = Math.cos(t);
+    // ── Ciclo de andar ────────────────────────────────────
+    if (emMovimento) {
+        this._tempoAndar += dt * vel;
+    } else {
+        this._tempoAndar *= 0.85;
+        if (Math.abs(this._tempoAndar) < 0.001) this._tempoAndar = 0;
+    }
 
-        // ── Pernas ────────────────────────────────────────
-        // Amplitude da coxa
-        const ampCoxa   = 0.52;
-        // Amplitude do joelho (sempre dobra para a frente, nunca para trás)
-        const ampJoelho = 0.38;
+    const t = this._tempoAndar;
+    const s = Math.sin(t);
+    const c = Math.cos(t);
 
-        const pCoxaEsq = this.partes.pivotCoxaEsq;
-        const pCoxaDir = this.partes.pivotCoxaDir;
-        const pJoelhoEsq = this.partes.pivotJoelhoEsq;
-        const pJoelhoDir = this.partes.pivotJoelhoDir;
+    // Amplitudes menores ao agachar (passo mais curto e contido)
+    const novaPosY = 0.91 - a * 0.30;
+const pCoxaEsq   = this.partes.pivotCoxaEsq;
+const pCoxaDir   = this.partes.pivotCoxaDir;
+const pJoelhoEsq = this.partes.pivotJoelhoEsq;
+const pJoelhoDir = this.partes.pivotJoelhoDir;
 
-        if (pCoxaEsq && pCoxaDir) {
-            pCoxaEsq.rotation.x = emMovimento ? s * ampCoxa : 0;
-            pCoxaDir.rotation.x = emMovimento ? -s * ampCoxa : 0;
-        }
+if (pCoxaEsq) pCoxaEsq.position.y = novaPosY;  // ← desce com o torso
+if (pCoxaDir) pCoxaDir.position.y = novaPosY;  // ← desce com o torso
 
-        if (pJoelhoEsq && pJoelhoDir) {
-            // O joelho dobra sempre para a frente (valor sempre >= 0)
-            // Usa (1 - cos) para obter impulso na fase de elevação
-            pJoelhoEsq.rotation.x = emMovimento ? Math.max(0, -c * ampJoelho) + 0.08 : 0;
-            pJoelhoDir.rotation.x = emMovimento ? Math.max(0,  c * ampJoelho) + 0.08 : 0;
-        }
+// Pose base de agacho:
+// - anca com rotação mínima (era 0.85 → causava levitação)
+// - joelho dobrado fundo para compensar e manter pés no chão
+const poseCoxaX   = a * 0.10;
+const poseJoelhoX = a * 1.10;
+const poseTorsoY  = novaPosY;
+const poseTorsoX  = a * 0.25;
 
-        // ── Braços ────────────────────────────────────────
-        // Braços balançam em oposição às pernas (natural)
-        const ampOmbro    = 0.38;
-        const ampCotovelo = 0.22;
+// Amplitudes de andar menores ao agachar
+const ampCoxa   = 0.52 * (1 - a) + 0.18 * a;
+const ampJoelho = 0.38 * (1 - a) + 0.15 * a;
 
-        const pOmbroEsq = this.partes.pivotOmbroEsq;
-        const pOmbroDir = this.partes.pivotOmbroDir;
-        const pCotEsq   = this.partes.pivotCotoveloEsq;
-        const pCotDir   = this.partes.pivotCotoveloDir;
+if (pCoxaEsq && pCoxaDir) {
+    pCoxaEsq.rotation.x = poseCoxaX + (emMovimento ?  s * ampCoxa : 0);
+    pCoxaDir.rotation.x = poseCoxaX + (emMovimento ? -s * ampCoxa : 0);
+}
 
-        if (pOmbroEsq && pOmbroDir) {
-            // Oposição às pernas
-            pOmbroEsq.rotation.x = emMovimento ? -s * ampOmbro : 0;
-            pOmbroDir.rotation.x = emMovimento ? s * ampOmbro : 0;
-            // Leve balanço lateral
-            pOmbroEsq.rotation.z = emMovimento ? Math.abs(c) * 0.06 : 0;
-            pOmbroDir.rotation.z = emMovimento ? -Math.abs(c) * 0.06 : 0;
-        }
+if (pJoelhoEsq && pJoelhoDir) {
+    pJoelhoEsq.rotation.x = poseJoelhoX + (emMovimento ? Math.max(0, -c * ampJoelho) + 0.08 : 0);
+    pJoelhoDir.rotation.x = poseJoelhoX + (emMovimento ? Math.max(0,  c * ampJoelho) + 0.08 : 0);
+}
 
-        if (pCotEsq && pCotDir) {
-            // Cotovelo dobra ligeiramente durante o balanço
-            pCotEsq.rotation.x = emMovimento ? Math.max(0, Math.sin(t + 0.5) * ampCotovelo) : 0;
-            pCotDir.rotation.x = emMovimento ? Math.max(0, Math.sin(t - 0.5) * ampCotovelo) : 0;
-        }
+    // ── Braços ─────────────────────────────────────────────
+    const ampOmbro    = 0.38;
+    const ampCotovelo = 0.22;
 
-        // ── Torso ─────────────────────────────────────────
-        // Rotação leve do torso em oposição às ancas
-        const pTorso = this.partes.pivotTorso;
-        if (pTorso) {
-            pTorso.rotation.y = emMovimento ? s * 0.08 : 0;
-            // Leve balanço vertical (bounce)
-            pTorso.position.y = emMovimento ? 0.91 + Math.abs(s) * 0.018 : 0.91;
-        }
+    const pOmbroEsq = this.partes.pivotOmbroEsq;
+    const pOmbroDir = this.partes.pivotOmbroDir;
+    const pCotEsq   = this.partes.pivotCotoveloEsq;
+    const pCotDir   = this.partes.pivotCotoveloDir;
 
-        // ── Cabeça ────────────────────────────────────────
-        // Cabeça compensa a rotação do torso (mantém-se estável)
-        const pCabeca = this.partes.pivotCabeca;
-        if (pCabeca) {
-            pCabeca.rotation.y = emMovimento ? -s * 0.04 : 0;
-            // Leve bob vertical
-            pCabeca.position.y = emMovimento ? 0.68 + Math.abs(s) * 0.012 : 0.68;
-        }
+    if (pOmbroEsq && pOmbroDir) {
+        pOmbroEsq.rotation.x = emMovimento ? -s * ampOmbro : 0;
+        pOmbroDir.rotation.x = emMovimento ?  s * ampOmbro : 0;
+        pOmbroEsq.rotation.z = emMovimento ?  Math.abs(c) * 0.06 : 0;
+        pOmbroDir.rotation.z = emMovimento ? -Math.abs(c) * 0.06 : 0;
+    }
+
+    if (pCotEsq && pCotDir) {
+        pCotEsq.rotation.x = emMovimento ? Math.max(0, Math.sin(t + 0.5) * ampCotovelo) : 0;
+        pCotDir.rotation.x = emMovimento ? Math.max(0, Math.sin(t - 0.5) * ampCotovelo) : 0;
+    }
+
+    // ── Torso ──────────────────────────────────────────────
+const pTorso = this.partes.pivotTorso;
+if (pTorso) {
+    pTorso.rotation.x = poseTorsoX;
+    pTorso.rotation.y = emMovimento ? s * 0.08 : 0;
+    pTorso.position.y = poseTorsoY + (emMovimento ? Math.abs(s) * 0.018 : 0);
+}
+
+    // ── Cabeça ─────────────────────────────────────────────
+    const pCabeca = this.partes.pivotCabeca;
+    if (pCabeca) {
+        pCabeca.rotation.y = emMovimento ? -s * 0.04 : 0;
+        pCabeca.position.y = emMovimento ? 0.68 + Math.abs(s) * 0.012 : 0.68;
+    }
     }
 
     // ── Colisões ───────────────────────────────────────────
     _boxNaPosicao(posicao) {
-        const raio = 0.6;  // Aumentado para detectar chaves melhor
+        const raio   = 0.6;
+        const topoY  = this.agachado ? 0.45 : 0.8;
         return new THREE.Box3(
             new THREE.Vector3(posicao.x - raio, posicao.y - 0.8, posicao.z - raio),
-            new THREE.Vector3(posicao.x + raio, posicao.y + 0.8, posicao.z + raio)
+            new THREE.Vector3(posicao.x + raio, posicao.y + topoY, posicao.z + raio)
         );
     }
 
     mover(cameraAngle, teclas) {
         const forward = new THREE.Vector3(-Math.sin(cameraAngle), 0, -Math.cos(cameraAngle));
         const right   = new THREE.Vector3(-Math.cos(cameraAngle), 0,  Math.sin(cameraAngle));
-        const velocidade = 0.15;
+        const velocidade = this.agachado ? 0.07 : 0.15;
 
         let delta = new THREE.Vector3();
         teclas.forEach(tecla => {
@@ -506,7 +520,15 @@ export class Jogador {
         this.grupo.lookAt(alvo);
     }
 
+    alternarAgacho() {
+        this.agachado = !this.agachado;
+    }
+
     get posicao() {
         return this.grupo.position;
+    }
+
+    get alturaCabeca() {
+        return 1.59 - this._transicaoAgacho * 0.30;
     }
 }

@@ -424,12 +424,12 @@ export class NPC {
     // ══════════════════════════════════════════
     // Deteção do jogador
     // ══════════════════════════════════════════
-   _detectarJogador(posJogador) {
+   _detectarJogador(posJogador, alturaCabecaJogador = 1.59) {
         const posNPC = this.grupo.position.clone();
         posNPC.y += 1.7;
 
         const posAlvo = posJogador.clone();
-        posAlvo.y += 1.0;
+        posAlvo.y += alturaCabecaJogador;
 
         // ── 1. Distância ──
         const paraJogador = new THREE.Vector3().subVectors(posAlvo, posNPC);
@@ -445,18 +445,13 @@ export class NPC {
         // ── 3. Linha de visão contra as Box3 diretamente ──
         // Faz amostragem ao longo do raio e verifica se algum ponto está dentro de um obstáculo
         const direcao = paraJogador.clone().normalize();
-        const passos  = Math.ceil(distancia / 0.4); // um ponto a cada ~0.4 unidades
+        const ray      = new THREE.Ray(posNPC, direcao);
+        const hitPoint = new THREE.Vector3();
 
-        const obstaculos = this.gestorColisoes.obstaculos;
-
-        for (let i = 1; i < passos; i++) {
-            const ponto = posNPC.clone().addScaledVector(direcao, (i / passos) * distancia);
-            const pontoBox = new THREE.Box3(
-                new THREE.Vector3(ponto.x - 0.05, ponto.y - 0.05, ponto.z - 0.05),
-                new THREE.Vector3(ponto.x + 0.05, ponto.y + 0.05, ponto.z + 0.05)
-            );
-            for (const obstaculo of obstaculos) {
-                if (pontoBox.intersectsBox(obstaculo)) return false;
+        for (const obstaculo of this.gestorColisoes.obstaculos) {
+            if (ray.intersectBox(obstaculo, hitPoint)) {
+                // Só bloqueia se o obstáculo estiver entre o NPC e o jogador
+                if (posNPC.distanceTo(hitPoint) < distancia) return false;
             }
         }
 
@@ -634,8 +629,8 @@ _atualizarCone() {
     // ══════════════════════════════════════════
     // Loop principal do NPC
     // ══════════════════════════════════════════
-    atualizar(posJogador) {
-        const detectado = this._detectarJogador(posJogador) || this._colideComJogador(posJogador);
+    atualizar(posJogador, alturaCabecaJogador = 1.59) {
+        const detectado = this._detectarJogador(posJogador, alturaCabecaJogador) || this._colideComJogador(posJogador);
 
         // ── Máquina de estados ─────────────────
         switch (this.estado) {
@@ -751,12 +746,12 @@ export class GestorNPCs {
         return npc;
     }
 
-    atualizar(posJogador) {
+    atualizar(posJogador, alturaCabecaJogador = 1.59) {
         let alertaGlobal = false;
         this.npcs.forEach(npc => {
-            const emAlerta = npc.atualizar(posJogador);
+            const emAlerta = npc.atualizar(posJogador, alturaCabecaJogador);
             if (emAlerta) alertaGlobal = true;
         });
-        return alertaGlobal; // true se qualquer NPC detetou o jogador
+        return alertaGlobal;
     }
 }

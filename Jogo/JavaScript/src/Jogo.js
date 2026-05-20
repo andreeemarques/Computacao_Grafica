@@ -143,15 +143,17 @@ export class Jogo {
     }
 
     _onKeyDown(event) {
-        if (!this._jogoAtivo) return; // bloqueado quando missão termina
-        if (event.which === 67) {
-            this.cameraManager.alternar();
-        } else if (event.key === 'l' || event.key === 'L') {
-            const p = document.getElementById('painel-luzes');
-            if (p) p.style.display = p.style.display === 'none' ? 'block' : 'none';
-        } else if ([87, 83, 65, 68].includes(event.which)) {
-            this.teclasPressionadas.add(event.which);
-        }
+    if (!this._jogoAtivo) return;
+    if (event.which === 67) {
+        this.cameraManager.alternar();
+    } else if (event.key === 'l' || event.key === 'L') {
+        const p = document.getElementById('painel-luzes');
+        if (p) p.style.display = p.style.display === 'none' ? 'block' : 'none';
+    } else if (event.key === 'z' || event.key === 'Z') {   // ← linha nova
+        this.jogador.alternarAgacho();                      // ← linha nova
+    } else if ([87, 83, 65, 68].includes(event.which)) {
+        this.teclasPressionadas.add(event.which);
+    }
     }
 
     _onKeyUp(event) {
@@ -232,9 +234,12 @@ export class Jogo {
             // Remove da lista de pendentes → nunca mais é testada no loop
             this._chavesPendentes.splice(i, 1);
 
+            if (chave.grupo)  chave.grupo.visible  = false;
+            if (chave.mesh)   chave.mesh.visible   = false;
+
             // Difere o trabalho pesado (dispose, removeFromParent, etc.)
             // para fora do frame atual — evita freeze visível
-            setTimeout(() => chave.apanhar(), 0);
+            setTimeout(() => chave.apanhar(), 200);
 
             console.log(`✓ Chave ${chave.id + 1} apanhada! (${this.chavesApanhadas.size}/3)`);
         }
@@ -298,7 +303,7 @@ export class Jogo {
         this.cenario.sirenes.forEach(s => s.update(delta));
         this.cenario.skybox.position.copy(this.cameraManager.camara.position);
 
-        const emAlerta = this.gestorNPCs.atualizar(this.jogador.posicao);
+        const emAlerta = this.gestorNPCs.atualizar(this.jogador.posicao, this.jogador.alturaCabeca);
         this._verificarDetecao(emAlerta);
 
         this.renderer.render(this.cena, this.cameraManager.camara);
