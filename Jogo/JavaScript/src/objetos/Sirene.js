@@ -29,9 +29,6 @@ export class Sirene {
         this.escala      = opcoes.escala      ?? 1;
         this.corLuz      = opcoes.corLuz      ?? 0xff2200;
 
-        this._tempoBlink = 0;
-        this._luzLigada  = false;
-
         this.grupo = new THREE.Group();
         this.grupo.position.set(x, y, z);
         this.grupo.rotation.y = opcoes.rotacaoParede ?? 0;
@@ -140,10 +137,24 @@ export class Sirene {
         aba.position.y = 0.22;
         this._grupoRotativo.add(aba);
 
-        // ── Luz pontual (PointLight) ──────────────────────────
-        this._luz = new THREE.PointLight(this.corLuz, 0, 12, 1.5);
-        this._luz.position.set(0, 0.92, 0.3);
-        this.grupo.add(this._luz);
+        const criarSpot = (anguloOffset) => {
+        const spot = new THREE.SpotLight(this.corLuz, 0, 18, Math.PI / 10, 0.4, 1.2);
+        spot.position.set(0, 0.08, 0);
+
+        const alvo = new THREE.Object3D();
+        alvo.position.set(
+            Math.sin(anguloOffset) * 8,
+            -1,
+            Math.cos(anguloOffset) * 8
+        );
+        this._grupoRotativo.add(alvo);
+        spot.target = alvo;
+
+        this._grupoRotativo.add(spot);
+        return spot;
+        };
+
+        this._spots = [criarSpot(0), criarSpot(Math.PI)]; // dois braços opostos
 
         // ── Fios decorativos descendo pelo suporte ────────────
         const matFio = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 1 });
@@ -157,7 +168,7 @@ export class Sirene {
     //  API pública
     // ─────────────────────────────────────────
 
-    ligar()    { this.ativo = true;  }
+    ligar()    { this.ativo = true;  this._acender();}
     desligar() { this.ativo = false; this._apagar(); }
 
     /**
@@ -169,15 +180,6 @@ export class Sirene {
 
         // Rotação contínua do farol
         this._grupoRotativo.rotation.y += this.velocidade * Math.PI * 2 * delta;
-
-        // Blink da luz (liga/desliga ~2× por rotação completa)
-        this._tempoBlink += delta;
-        const periodo = 1 / (this.velocidade * 2);
-        if (this._tempoBlink >= periodo) {
-            this._tempoBlink -= periodo;
-            this._luzLigada = !this._luzLigada;
-            this._luzLigada ? this._acender() : this._apagar();
-        }
     }
 
     // ─────────────────────────────────────────
@@ -187,13 +189,13 @@ export class Sirene {
     _acender() {
         this._matCupula.emissiveIntensity = 1.5;
         this._matLente.emissiveIntensity  = 3.0;
-        this._luz.intensity               = 3.5;
+        this._spots.forEach(s => s.intensity = 4.0);
     }
 
     _apagar() {
         this._matCupula.emissiveIntensity = 0;
         this._matLente.emissiveIntensity  = 0;
-        this._luz.intensity               = 0;
+        this._spots.forEach(s => s.intensity = 0);
     }
 
     /** Remove a sirene da cena e liberta memória. */
