@@ -279,6 +279,8 @@ export class Jogo {
 
         // Quando a missão terminou: só renderiza, não atualiza gameplay
         if (!this._jogoAtivo) {
+            this.cenario.sirenes.forEach(s => s.update(delta));
+            this.gestorNPCs.npcs.forEach(npc => npc._atualizarCone());
             this.cenario.skybox.position.copy(this.cameraManager.camara.position);
             this.renderer.render(this.cena, this.cameraManager.camara);
             return;
