@@ -6,10 +6,9 @@ import { Cenario }        from './Cenario.js';
 import { GestorLuzes }    from './Luzes.js';
 import { UILuzes }        from './UILuzes.js';
 import { GestorNPCs }     from './NPC.js';
+import { GestorCutscene } from './GestorCutscene.js';  // ← NOVO
 
-// Raio máximo (em unidades do mundo) para sequer testar colisão com uma chave.
-// Deve ser >= metade da diagonal da boxColisao da chave.
-const RAIO_APANHA_CHAVE_SQ = 4.0; // 2 unidades de raio → ao quadrado evita sqrt
+const RAIO_APANHA_CHAVE_SQ = 4.0;
 
 export class Jogo {
     constructor() {
@@ -25,6 +24,12 @@ export class Jogo {
         this.uiLuzes        = new UILuzes(this.gestorLuzes);
         this.gestorNPCs     = new GestorNPCs(this.cena, this.gestorColisoes);
 
+        // ── Gestor de Cut-scenes ──────────────────────────────
+        this.gestorCutscene     = new GestorCutscene(this.jogador, this.cameraManager, this.cena);
+        this._cutsceneAtiva     = true;   // bloqueia gameplay enquanto a intro corre
+        this._extraçãoDisparada = false;
+        // ─────────────────────────────────────────────────────
+
         this.teclasPressionadas = new Set();
         this._loopId = null;
         this._onKeyDown = this._onKeyDown.bind(this);
@@ -32,21 +37,18 @@ export class Jogo {
 
         this.missaoConcluida = false;
         this.missaoFalhada   = false;
-        this._jogoAtivo      = true;  // false quando a missão termina (concluída ou falhada)
+        this._jogoAtivo      = true;
         this.chavesApanhadas = new Set();
 
-        // Cache da lista de chaves ainda por apanhar — evita iterar as já apanhadas
-        this._chavesPendentes = null; // inicializado após this.cenario estar pronto
-        this._tempVectorChaves = new THREE.Vector3(); // Cache para evitar criar novos vectors
-
-        this._timeoutMensagemChaves  = null;
-        this._ultimaMensagemPosicao  = null;
+        this._chavesPendentes       = null;
+        this._tempVectorChaves      = new THREE.Vector3();
+        this._timeoutMensagemChaves = null;
+        this._ultimaMensagemPosicao = null;
 
         this.pontoMissao = { minX: -14, maxX: -5, minZ: 10, maxZ: 13 };
 
         this._criarPainelChaves();
 
-        // Colisão manual para a cabine
         this.gestorColisoes.registarBox(
             new THREE.Vector3(10.5, 0, 14.2),
             new THREE.Vector3(13.5, 3.2, 17.2)
@@ -67,18 +69,26 @@ export class Jogo {
             { x: -10, z: 16 },
         ]);
 
-        // Guardar referência às chaves pendentes (as que ainda não foram apanhadas)
         this._chavesPendentes = [...this.cenario.chaves];
 
         this._registarEventos();
         this.cameraManager.atualizar(this.jogador.posicao);
+
+        // ── Inicia com a cut-scene de entrada ─────────────────
+        this.gestorCutscene.iniciarEntrada(() => {
+            // Codec fechou — gameplay começa
+            this._cutsceneAtiva = false;
+            this.cameraManager.cameraAtual.ativar();
+        });
+        // ─────────────────────────────────────────────────────
+
         this._loop();
     }
 
     // ─── Renderer ────────────────────────────────────────────────────────────
 
     _criarRenderer() {
-        const renderer = new THREE.WebGLRenderer({ antialias: false }); // antialias off = +perf
+        const renderer = new THREE.WebGLRenderer({ antialias: false });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.shadowMap.enabled = true;
         renderer.setClearColor(0x87ceeb);
@@ -118,11 +128,9 @@ export class Jogo {
     _mostrarMensagemChaves(mensagem) {
         if (!this._painelChaves) return;
         if (this._timeoutMensagemChaves) clearTimeout(this._timeoutMensagemChaves);
-
-        this._painelChaves.textContent  = mensagem;
-        this._painelChaves.style.display  = 'block';
-        this._painelChaves.style.opacity  = '1';
-
+        this._painelChaves.textContent   = mensagem;
+        this._painelChaves.style.display = 'block';
+        this._painelChaves.style.opacity = '1';
         this._timeoutMensagemChaves = setTimeout(() => {
             this._painelChaves.style.opacity = '0';
             setTimeout(() => { this._painelChaves.style.display = 'none'; }, 300);
@@ -144,17 +152,20 @@ export class Jogo {
     }
 
     _onKeyDown(event) {
-    if (!this._jogoAtivo) return;
-    if (event.which === 67) {
-        this.cameraManager.alternar();
-    } else if (event.key === 'l' || event.key === 'L') {
-        const p = document.getElementById('painel-luzes');
-        if (p) p.style.display = p.style.display === 'none' ? 'block' : 'none';
-    } else if (event.key === 'z' || event.key === 'Z') {   // ← linha nova
-        this.jogador.alternarAgacho();                      // ← linha nova
-    } else if ([87, 83, 65, 68].includes(event.which)) {
-        this.teclasPressionadas.add(event.which);
-    }
+        // Bloqueia input durante cutscenes
+        if (this._cutsceneAtiva) return;
+        if (!this._jogoAtivo) return;
+
+        if (event.which === 67) {
+            this.cameraManager.alternar();
+        } else if (event.key === 'l' || event.key === 'L') {
+            const p = document.getElementById('painel-luzes');
+            if (p) p.style.display = p.style.display === 'none' ? 'block' : 'none';
+        } else if (event.key === 'z' || event.key === 'Z') {
+            this.jogador.alternarAgacho();
+        } else if ([87, 83, 65, 68].includes(event.which)) {
+            this.teclasPressionadas.add(event.which);
+        }
     }
 
     _onKeyUp(event) {
@@ -186,9 +197,17 @@ export class Jogo {
 
         this._ocultarMensagemChaves();
         this.missaoConcluida = true;
-        this._terminarJogo();
-        const painel = document.getElementById('panel-missao-concluida');
-        if (painel) painel.classList.add('active');
+        this._cutsceneAtiva  = true;
+        this.teclasPressionadas.clear();
+        this.cameraManager.cameraAtual.desativar();
+
+        // Dispara a cut-scene de extração — o painel aparece só no fim dela
+        this.gestorCutscene.iniciarExtracao(() => {
+            this._cutsceneAtiva = false;
+            this._jogoAtivo     = false;
+            const painel = document.getElementById('panel-missao-concluida');
+            if (painel) painel.classList.add('active');
+        });
     }
 
     _verificarDetecao(emAlerta) {
@@ -205,7 +224,7 @@ export class Jogo {
         }, 2500);
     }
 
-    // ─── Apanhar chaves (otimizado) ───────────────────────────────────────────
+    // ─── Apanhar chaves ───────────────────────────────────────────────────────
 
     _atualizarChaves(delta) {
         if (this._chavesPendentes.length === 0) return;
@@ -215,7 +234,6 @@ export class Jogo {
 
         for (let i = this._chavesPendentes.length - 1; i >= 0; i--) {
             const chave = this._chavesPendentes[i];
-
             chave.update(delta);
 
             if (!chave.boxColisao || !jogadorBox) continue;
@@ -224,25 +242,23 @@ export class Jogo {
             const dx = jogadorPos.x - chaveCentro.x;
             const dz = jogadorPos.z - chaveCentro.z;
             if (dx * dx + dz * dz > RAIO_APANHA_CHAVE_SQ) continue;
-
             if (!jogadorBox.intersectsBox(chave.boxColisao)) continue;
 
             this.chavesApanhadas.add(chave.id);
             this._chavesPendentes.splice(i, 1);
 
-            if (chave.grupo)  chave.grupo.visible  = false;
-            if (chave.mesh)   chave.mesh.visible   = false;
+            if (chave.grupo) chave.grupo.visible = false;
+            if (chave.mesh)  chave.mesh.visible  = false;
 
             setTimeout(() => chave.apanhar(), 2000);
         }
     }
 
-    // ─── Terminar jogo (bloqueia input, liberta rato) ─────────────────────────
+    // ─── Terminar jogo ────────────────────────────────────────────────────────
 
     _terminarJogo() {
         this._jogoAtivo = false;
-        this.teclasPressionadas.clear(); // limpa teclas que possam estar pressionadas
-        // Liberta o pointer lock para o cursor ficar visível nos painéis
+        this.teclasPressionadas.clear();
         this.cameraManager.cameraTerceiraPessoa.desativar();
     }
 
@@ -258,8 +274,8 @@ export class Jogo {
         document.removeEventListener('keydown', this._onKeyDown, false);
         document.removeEventListener('keyup',   this._onKeyUp,   false);
 
-        // Destruir câmaras (remove os seus próprios event listeners)
         this.cameraManager.destruir();
+        this.gestorCutscene.destruir();  // ← NOVO
 
         if (this.renderer?.domElement) this.renderer.domElement.remove();
 
@@ -274,7 +290,15 @@ export class Jogo {
 
         const delta = this.clock.getDelta();
 
-        // Quando a missão terminou: só renderiza, não atualiza gameplay
+        // ── Cut-scene ativa — bloqueia tudo o resto ───────────
+        if (this._cutsceneAtiva) {
+            this.gestorCutscene.atualizar(delta);
+            this.cenario.skybox.position.copy(this.gestorCutscene.camara.position);
+            this.renderer.render(this.cena, this.gestorCutscene.camara);
+            return;
+        }
+
+        // ── Missão já terminou — só renderiza ─────────────────
         if (!this._jogoAtivo) {
             this.cenario.sirenes.forEach(s => s.update(delta));
             this.gestorNPCs.npcs.forEach(npc => npc._atualizarCone());
@@ -283,6 +307,7 @@ export class Jogo {
             return;
         }
 
+        // ── Gameplay normal ───────────────────────────────────
         this.gestorColisoes.atualizar();
         this.jogador.mover(this.cameraManager.angulo, Array.from(this.teclasPressionadas));
         this.jogador.atualizar(this.teclasPressionadas.size > 0);
