@@ -37,6 +37,7 @@ export class Jogo {
 
         // Cache da lista de chaves ainda por apanhar — evita iterar as já apanhadas
         this._chavesPendentes = null; // inicializado após this.cenario estar pronto
+        this._tempVectorChaves = new THREE.Vector3(); // Cache para evitar criar novos vectors
 
         this._timeoutMensagemChaves  = null;
         this._ultimaMensagemPosicao  = null;
@@ -212,7 +213,6 @@ export class Jogo {
         const jogadorPos = this.jogador.posicao;
         const jogadorBox = this.jogador.boxColisao;
 
-        // Iteramos para trás para poder fazer splice sem saltarmos índices
         for (let i = this._chavesPendentes.length - 1; i >= 0; i--) {
             const chave = this._chavesPendentes[i];
 
@@ -220,28 +220,20 @@ export class Jogo {
 
             if (!chave.boxColisao || !jogadorBox) continue;
 
-            // 1.ª guarda: distância ao quadrado (muito mais barato que intersectsBox)
-            const dx = jogadorPos.x - chave.boxColisao.getCenter(new THREE.Vector3()).x;
-            const dz = jogadorPos.z - chave.boxColisao.getCenter(new THREE.Vector3()).z;
+            const chaveCentro = chave.boxColisao.getCenter(this._tempVectorChaves);
+            const dx = jogadorPos.x - chaveCentro.x;
+            const dz = jogadorPos.z - chaveCentro.z;
             if (dx * dx + dz * dz > RAIO_APANHA_CHAVE_SQ) continue;
 
-            // 2.ª guarda: colisão real apenas quando perto
             if (!jogadorBox.intersectsBox(chave.boxColisao)) continue;
 
-            // Apanhou a chave!
             this.chavesApanhadas.add(chave.id);
-
-            // Remove da lista de pendentes → nunca mais é testada no loop
             this._chavesPendentes.splice(i, 1);
 
             if (chave.grupo)  chave.grupo.visible  = false;
             if (chave.mesh)   chave.mesh.visible   = false;
 
-            // Difere o trabalho pesado (dispose, removeFromParent, etc.)
-            // para fora do frame atual — evita freeze visível
-            setTimeout(() => chave.apanhar(), 200);
-
-            console.log(`✓ Chave ${chave.id + 1} apanhada! (${this.chavesApanhadas.size}/3)`);
+            setTimeout(() => chave.apanhar(), 2000);
         }
     }
 

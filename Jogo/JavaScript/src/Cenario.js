@@ -54,15 +54,22 @@ export class Cenario
             }
         
             _adicionarSkybox(cena) {
-                const loader    = new THREE.TextureLoader();
-                const materiais = [
-                    new THREE.MeshBasicMaterial({ map: loader.load(`./Skybox/Face3.png`), side: THREE.BackSide }),
-                    new THREE.MeshBasicMaterial({ map: loader.load(`./Skybox/Face0.png`), side: THREE.BackSide }),
-                    new THREE.MeshBasicMaterial({ map: loader.load(`./Skybox/Face_de_cima.png`), side: THREE.BackSide }),
-                    new THREE.MeshBasicMaterial({ map: loader.load(`./Skybox/Face_do_chao.png`), side: THREE.BackSide }),
-                    new THREE.MeshBasicMaterial({ map: loader.load(`./Skybox/Face2.png`), side: THREE.BackSide }),
-                    new THREE.MeshBasicMaterial({ map: loader.load(`./Skybox/Face1.png`), side: THREE.BackSide })
+                const loader = new THREE.TextureLoader();
+                const materiais = [];
+                const faces = [
+                    './Skybox/Face3.png', './Skybox/Face0.png', './Skybox/Face_de_cima.png',
+                    './Skybox/Face_do_chao.png', './Skybox/Face2.png', './Skybox/Face1.png'
                 ];
+
+                faces.forEach(face => {
+                    loader.loadAsync(face).then(texture => {
+                        const mat = new THREE.MeshBasicMaterial({ map: texture, side: THREE.BackSide });
+                        const idx = faces.indexOf(face);
+                        if (materiais[idx]) materiais[idx] = mat;
+                        else materiais[idx] = mat;
+                    });
+                });
+
                 const skybox = new THREE.Mesh(new THREE.BoxGeometry(170, 170, 170), materiais);
                 cena.add(skybox);
                 return skybox;

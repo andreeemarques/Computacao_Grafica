@@ -64,17 +64,11 @@ export class Chave {
         this.grupo.add(luz);
     }
 
-    /**
-     * Atualiza a chave (rotação)
-     * @param {number} delta - segundos desde o último frame
-     */
     update(delta) {
         if (this.apanhada) return;
-        
-        // Rotação contínua
+
         this.grupo.rotation.y += Math.PI * delta;
-        
-        // Movimento up-down suave
+
         const tempoSegundos = Date.now() * 0.001;
         const posicaoY = (this.grupo.userData.posicaoOriginalY ?? this.grupo.position.y);
         if (!this.grupo.userData.posicaoOriginalY) {
@@ -82,9 +76,7 @@ export class Chave {
         }
         this.grupo.position.y = posicaoY + Math.sin(tempoSegundos) * 0.3;
 
-        // Atualizar box de colisão apenas (reutilizar a mesma instância)
-        this.boxColisao.setFromObject(this.grupo);
-        this.boxColisao.expandByScalar(0.3);
+        this.boxColisao.setFromObject(this.grupo, true);
     }
 
     /**
