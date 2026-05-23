@@ -18,27 +18,17 @@ export class GestorLuzes {
         const direcional = new THREE.DirectionalLight(0xffffff, 1.0);
         direcional.position.set(10, 20, 10);
         direcional.castShadow = true;
-        //direcional.shadow.mapSize.set(2048, 2048);
         cena.add(direcional);
 
         // ── HemisphereLight (céu/chão) ──
         const hemisferica = new THREE.HemisphereLight(0x87ceeb, 0x444422, 0.6);
         cena.add(hemisferica);
 
-        // ── SpotLight ──
-       /* const spot = new THREE.SpotLight(0xffffff, 2, 50, Math.PI / 6, 0.3);
-        spot.position.set(0, 15, 15);
-        spot.target.position.set(0, 0, 15);
-        spot.castShadow = true;
-        cena.add(spot);
-        cena.add(spot.target);*/
-
         // Regista todas com um nome e intensidade original
         this.luzes = {
             ambiente:    { luz: ambiente,    intensidade: ambiente.intensity },
             direcional:  { luz: direcional,  intensidade: direcional.intensity },
             hemisferica: { luz: hemisferica, intensidade: hemisferica.intensity },
-            //spot:        { luz: spot,        intensidade: spot.intensity },
         };
 
         // ── Postes com PointLight ──
@@ -47,25 +37,33 @@ export class GestorLuzes {
             new PosteIluminacao(cena, 26.7,  40, 0xffaa44, 20, 25),
             new PosteIluminacao(cena, 45.5,  20, 0xffaa44, 20, 25),
             new PosteIluminacao(cena, 45.5,  40, 0xffaa44, 20, 25),
-            new PosteIluminacao(cena, 10, 17, 0xffaa44, 20, 25),
-            new PosteIluminacao(cena, 10, 33, 0xffaa44, 20, 25),
-            new PosteIluminacao(cena, -15, 45, 0xffaa44, 20, 25),
-            new PosteIluminacao(cena, -34, 35, 0xffaa44, 20, 25),
-            new PosteIluminacao(cena, -15, 20, 0xffaa44, 20, 25),
+            new PosteIluminacao(cena, 10,    17, 0xffaa44, 20, 25),
+            new PosteIluminacao(cena, 10,    33, 0xffaa44, 20, 25),
+            new PosteIluminacao(cena, -15,   45, 0xffaa44, 20, 25),
+            new PosteIluminacao(cena, -34,   35, 0xffaa44, 20, 25),
+            new PosteIluminacao(cena, -15,   20, 0xffaa44, 20, 25),
         ];
 
-        // Registrar colisões para os postes (apenas base e fuste)
+        // Registar colisões para os postes (apenas base e fuste)
         this.postes.forEach(poste => {
             const pos = poste.grupo.position;
-            // Base: raio 0.25, altura 0.3, centro y=0.15 -> y de 0 a 0.3
-            const baseMin = new THREE.Vector3(pos.x - 0.25, pos.y, pos.z - 0.25);
+            const baseMin = new THREE.Vector3(pos.x - 0.25, pos.y,       pos.z - 0.25);
             const baseMax = new THREE.Vector3(pos.x + 0.25, pos.y + 0.3, pos.z + 0.25);
             this.gc.registarBox(baseMin, baseMax);
-            // Fuste: raio 0.09, altura 7, centro y=3.8 -> y de 0.3 a 7.3
             const fusteMin = new THREE.Vector3(pos.x - 0.09, pos.y + 0.3, pos.z - 0.09);
             const fusteMax = new THREE.Vector3(pos.x + 0.09, pos.y + 7.3, pos.z + 0.09);
             this.gc.registarBox(fusteMin, fusteMax);
         });
+
+        // ── Aplica definições escolhidas no menu ──
+        const def = (typeof window.obterDefinicoesLuz === 'function')
+            ? window.obterDefinicoesLuz()
+            : { ambiente: true, direcional: true, hemisferica: false, postes: false };
+
+        if (!def.ambiente)    this.desligar('ambiente');
+        if (!def.direcional)  this.desligar('direcional');
+        if (!def.hemisferica) this.desligar('hemisferica');
+        if (!def.postes)      this.desligarPostes();
     }
 
     ligar(nome) {
@@ -90,9 +88,9 @@ export class GestorLuzes {
     }
 
     // ── Postes (liga/desliga todos de uma vez) ──
-    ligarPostes()   { this.postes.forEach(p => p.ligar()); }
-    desligarPostes(){ this.postes.forEach(p => p.desligar()); }
-    alternarPostes(){
+    ligarPostes()    { this.postes.forEach(p => p.ligar()); }
+    desligarPostes() { this.postes.forEach(p => p.desligar()); }
+    alternarPostes() {
         const algumLigado = this.postes.some(p => p.estaLigado);
         algumLigado ? this.desligarPostes() : this.ligarPostes();
     }

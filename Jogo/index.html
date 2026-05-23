@@ -8,7 +8,6 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { overflow: hidden; background: #000; font-family: 'Share Tech Mono', monospace; }
 
-        /* ── Scanlines overlay ── */
         body::after {
             content: '';
             position: fixed; inset: 0;
@@ -23,7 +22,6 @@
             z-index: 9999;
         }
 
-        /* ── Menu ── */
         #menu {
             position: fixed; inset: 0;
             background: #000;
@@ -41,14 +39,12 @@
             99% { opacity: 0.95; }
         }
 
-        /* Canto tático */
         .corner { position: absolute; width: 40px; height: 40px; border-color: #00ff41; border-style: solid; }
         .corner-tl { top: 20px; left: 20px; border-width: 2px 0 0 2px; }
         .corner-tr { top: 20px; right: 20px; border-width: 2px 2px 0 0; }
         .corner-bl { bottom: 20px; left: 20px; border-width: 0 0 2px 2px; }
         .corner-br { bottom: 20px; right: 20px; border-width: 0 2px 2px 0; }
 
-        /* Radar decorativo */
         .radar {
             position: absolute;
             bottom: 40px; right: 50px;
@@ -77,7 +73,6 @@
             to   { transform: rotate(360deg); }
         }
 
-        /* Linha de status no topo */
         .status-bar {
             position: absolute;
             top: 20px; left: 50%; transform: translateX(-50%);
@@ -91,7 +86,6 @@
             50%,99%     { opacity: 1; }
         }
 
-        /* Título */
         .title-block { text-align: center; margin-bottom: 60px; }
         .title-sub {
             color: rgba(0,255,65,0.6);
@@ -115,7 +109,6 @@
             margin-top: 10px;
         }
 
-        /* Linha decorativa */
         .divider {
             width: 300px;
             height: 1px;
@@ -124,7 +117,6 @@
             opacity: 0.5;
         }
 
-        /* Botões */
         .menu-btn {
             display: block;
             width: 300px;
@@ -157,7 +149,6 @@
         .menu-btn:hover::before { opacity: 1; }
         .menu-btn:active { background: rgba(0,255,65,0.15); }
 
-        /* ── Painéis de overlay ── */
         .panel {
             display: none;
             position: fixed; inset: 0;
@@ -219,6 +210,41 @@
             cursor: pointer;
         }
         .panel-close:hover { background: rgba(0,255,65,0.08); color: #00ff41; }
+
+        /* ── Toggles de luz ── */
+        .luz-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            padding: 10px 14px;
+            border: 1px solid rgba(0,255,65,0.2);
+            color: rgba(0,255,65,0.8);
+            font-size: 12px;
+            letter-spacing: 2px;
+            transition: border-color 0.2s;
+        }
+        .luz-toggle:hover { border-color: rgba(0,255,65,0.5); }
+        .luz-toggle em {
+            color: rgba(0,255,65,0.4);
+            font-size: 10px;
+            font-style: normal;
+            margin-left: 8px;
+        }
+        .luz-toggle input[type="checkbox"] {
+            accent-color: #00ff41;
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .def-aviso {
+            font-size: 11px;
+            color: rgba(0,255,65,0.45);
+            letter-spacing: 2px;
+            margin-bottom: 18px;
+            line-height: 1.8;
+        }
     </style>
 </head>
 <body>
@@ -243,6 +269,7 @@
         <button class="menu-btn" id="btn-start">Iniciar Missão</button>
         <button class="menu-btn" id="btn-manual">Manual de Controlos</button>
         <button class="menu-btn" id="btn-objetivo">Objetivo da Missão</button>
+        <button class="menu-btn" id="btn-definicoes">Definições</button>
     </div>
 
     <!-- ── PAINEL: MANUAL ── -->
@@ -278,6 +305,36 @@
                 Boa sorte. Esta mensagem irá autodestruir-se.
             </div>
             <button class="panel-close" onclick="fecharPainel('panel-objetivo')">[ Fechar ]</button>
+        </div>
+    </div>
+
+    <!-- ── PAINEL: DEFINIÇÕES ── -->
+    <div class="panel" id="panel-definicoes">
+        <div class="panel-box">
+            <div class="panel-title">// Definições de Iluminação</div>
+            <div class="def-aviso">
+                Escolhe as luzes ativas ao iniciar a missão.<br>
+                Mais luzes ativas = maior impacto no desempenho.
+            </div>
+            <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:8px;">
+                <label class="luz-toggle">
+                    <span>Luz Ambiente <em>— iluminação base global</em></span>
+                    <input type="checkbox" id="def-ambiente" checked>
+                </label>
+                <label class="luz-toggle">
+                    <span>Luz Direcional <em>— sol, projeta sombras</em></span>
+                    <input type="checkbox" id="def-direcional" checked>
+                </label>
+                <label class="luz-toggle">
+                    <span>Luz Hemisférica <em>— céu e chão</em></span>
+                    <input type="checkbox" id="def-hemisferica">
+                </label>
+                <label class="luz-toggle">
+                    <span>Postes de Iluminação <em>— 9 PointLights, pesado</em></span>
+                    <input type="checkbox" id="def-postes">
+                </label>
+            </div>
+            <button class="panel-close" onclick="fecharPainel('panel-definicoes')">[ Fechar ]</button>
         </div>
     </div>
 
@@ -343,12 +400,26 @@
             document.dispatchEvent(new CustomEvent('voltarAoMenu'));
         }
 
+        // Expõe as definições de luz escolhidas no menu para o GestorLuzes ler
+        window.obterDefinicoesLuz = function () {
+            return {
+                ambiente:    document.getElementById('def-ambiente').checked,
+                direcional:  document.getElementById('def-direcional').checked,
+                hemisferica: document.getElementById('def-hemisferica').checked,
+                postes:      document.getElementById('def-postes').checked,
+            };
+        };
+
         document.getElementById('btn-manual').addEventListener('click', () => {
             document.getElementById('panel-manual').classList.add('active');
         });
 
         document.getElementById('btn-objetivo').addEventListener('click', () => {
             document.getElementById('panel-objetivo').classList.add('active');
+        });
+
+        document.getElementById('btn-definicoes').addEventListener('click', () => {
+            document.getElementById('panel-definicoes').classList.add('active');
         });
 
         document.getElementById('btn-start').addEventListener('click', () => {

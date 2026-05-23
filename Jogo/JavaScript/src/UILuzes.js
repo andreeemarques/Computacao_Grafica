@@ -33,12 +33,10 @@ export class UILuzes {
         `;
         painel.appendChild(titulo);
 
-        // Lista de luzes com nome de exibição
         const luzes = [
-            { nome: 'ambiente',    label: 'Ambiente', tipo: 'simples' },
+            { nome: 'ambiente',    label: 'Ambiente',        tipo: 'simples' },
             { nome: 'direcional',  label: 'Direcional (Sol)', tipo: 'simples' },
-            { nome: 'hemisferica', label: 'Hemisférica', tipo: 'simples' },
-            /*{ nome: 'spot',        label: 'Spot', tipo: 'simples' },*/
+            { nome: 'hemisferica', label: 'Hemisférica',      tipo: 'simples' },
             { nome: 'postes',      label: 'Postes (Point)',   tipo: 'postes'  },
         ];
 
@@ -55,13 +53,10 @@ export class UILuzes {
 
             const texto = document.createElement('span');
             texto.textContent = label;
-            texto.style.color = 'rgba(0,255,65,0.8)';
 
             const toggle = document.createElement('span');
-            toggle.textContent = '[ ON ]';
             toggle.style.cssText = `
-                color: #00ff41;
-                border: 1px solid rgba(0,255,65,0.5);
+                border: 1px solid;
                 padding: 2px 6px;
                 font-size: 10px;
                 letter-spacing: 1px;
@@ -84,10 +79,9 @@ export class UILuzes {
             };
 
             linha.addEventListener('click', (e) => {
-                // Evita que o clique chegue ao PointerLock
                 e.stopPropagation();
                 if (tipo === 'postes') {
-                this.gestor.alternarPostes();
+                    this.gestor.alternarPostes();
                 } else {
                     this.gestor.alternar(nome);
                 }
@@ -97,6 +91,9 @@ export class UILuzes {
             linha.appendChild(texto);
             linha.appendChild(toggle);
             painel.appendChild(linha);
+
+            // Reflete o estado inicial definido no menu em vez de assumir sempre ON
+            atualizar();
         });
 
         document.body.appendChild(painel);
