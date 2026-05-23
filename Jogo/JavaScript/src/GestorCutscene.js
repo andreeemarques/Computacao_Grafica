@@ -38,6 +38,8 @@ export class GestorCutscene {
 
         this._criarTampa();
         this._criarHolofote();
+        this._criarVento();
+        this._criarSomHelicoptero();
 
         window.addEventListener('resize', () => {
             this._camaraCine.aspect = window.innerWidth / window.innerHeight;
@@ -113,8 +115,9 @@ export class GestorCutscene {
 
     // ── Holofote de Extração ────────────────────────────────
     _criarHolofote() {
-        const spot = new THREE.SpotLight(0xffffff, 0, 0, Math.PI / 8, 0.4);
-        spot.position.set(-13, 55, 5);
+        // Ângulo muito mais fechado (PI/20) = feixe concentrado na Viper
+        const spot = new THREE.SpotLight(0xddeeff, 0, 0, Math.PI / 20, 0.15);
+        spot.position.set(-13, 50, 2);
         spot.castShadow = false;
         spot.visible = false;
 
@@ -133,10 +136,147 @@ export class GestorCutscene {
         this._holofote.intensity = 0;
         this._holofoteAlvo.position.set(posJogador.x, posJogador.y, posJogador.z);
         this._holofote.target.updateMatrixWorld();
-        this._holofoteIntensidadeAlvo = 800; // valor alto — sem decay o SpotLight precisa disto
+        this._holofoteIntensidadeAlvo = 1200;
     }
 
-    // ── Keyframes da câmara ─────────────────────────────────
+    // ── Vento do Helicóptero ────────────────────────────────
+    _criarVento() {
+        const N = 120;
+        const geo = new THREE.BufferGeometry();
+        const pos = new Float32Array(N * 3);
+
+        // Partículas espalhadas em torno do ponto de extração
+        for (let i = 0; i < N; i++) {
+            pos[i * 3]     = -13 + (Math.random() - 0.5) * 8;
+            pos[i * 3 + 1] = 20.5 + Math.random() * 3;
+            pos[i * 3 + 2] =  2   + (Math.random() - 0.5) * 8;
+        }
+        geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+
+        const mat = new THREE.PointsMaterial({
+            color: 0xccccaa,
+            size: 0.08,
+            transparent: true,
+            opacity: 0,
+            depthWrite: false,
+        });
+
+        this._vento      = new THREE.Points(geo, mat);
+        this._ventoAtivo = false;
+        this._ventoPosInicial = pos.slice(); // cópia das posições iniciais
+        this.cena.add(this._vento);
+    }
+
+    _ativarVento() {
+        this._ventoAtivo = true;
+        this._vento.material.opacity = 0.7;
+    }
+
+    _atualizarVento(dt) {
+        if (!this._ventoAtivo) return;
+        const pos = this._vento.geometry.attributes.position.array;
+        const N   = pos.length / 3;
+
+        for (let i = 0; i < N; i++) {
+            // Vento radial para fora do centro + ligeiro caos
+            const dx = pos[i * 3]     - (-13);
+            const dz = pos[i * 3 + 2] -   2;
+            const dist = Math.sqrt(dx * dx + dz * dz) + 0.01;
+
+            pos[i * 3]     += (dx / dist) * dt * 2.5 + (Math.random() - 0.5) * dt * 0.8;
+            pos[i * 3 + 1] -= dt * 0.4; // cai ligeiramente
+            pos[i * 3 + 2] += (dz / dist) * dt * 2.5 + (Math.random() - 0.5) * dt * 0.8;
+
+            // Reinicia partícula se sair muito longe ou cair abaixo do telhado
+            if (dist > 7 || pos[i * 3 + 1] < 20.2) {
+                const idx = i * 3;
+                pos[idx]     = -13 + (Math.random() - 0.5) * 2;
+                pos[idx + 1] = 20.5 + Math.random() * 1.5;
+                pos[idx + 2] =   2  + (Math.random() - 0.5) * 2;
+            }
+        }
+        this._vento.geometry.attributes.position.needsUpdate = true;
+    }
+
+    // ── Som sintético do Helicóptero (Web Audio API) ────────
+    _criarSomHelicoptero() {
+        this._heliAudio  = null;
+        this._heliGain   = null;
+        this._heliAtivo  = false;
+    }
+
+    _iniciarSomHelicoptero() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+            // Rotor principal — onda baixa pulsante
+            const osc1 = ctx.createOscillator();
+            osc1.type = 'sawtooth';
+            osc1.frequency.setValueAtTime(18, ctx.currentTime); // Hz muito baixo = rotor
+            osc1.frequency.linearRampToValueAtTime(22, ctx.currentTime + 6); // acelera ao aproximar
+
+            // Modulação de amplitude — cria o efeito "thump thump"
+            const lfo = ctx.createOscillator();
+            lfo.type = 'sine';
+            lfo.frequency.setValueAtTime(6.5, ctx.currentTime);  // 6.5 pás/s
+            lfo.frequency.linearRampToValueAtTime(8, ctx.currentTime + 6);
+
+            const lfoGain = ctx.createGain();
+            lfoGain.gain.value = 0.5;
+            lfo.connect(lfoGain);
+
+            const gainMod = ctx.createGain();
+            gainMod.gain.value = 0.5;
+            lfoGain.connect(gainMod.gain);
+
+            // Ruído de turbina por cima
+            const bufferSize = ctx.sampleRate * 2;
+            const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+            const data   = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+            const noise  = ctx.createBufferSource();
+            noise.buffer = buffer;
+            noise.loop   = true;
+
+            const noiseFilter = ctx.createBiquadFilter();
+            noiseFilter.type = 'bandpass';
+            noiseFilter.frequency.value = 180;
+            noiseFilter.Q.value = 0.8;
+            noise.connect(noiseFilter);
+
+            // Gain master — começa mudo e sobe (helicóptero ao longe)
+            const masterGain = ctx.createGain();
+            masterGain.gain.setValueAtTime(0, ctx.currentTime);
+            masterGain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + 3);  // aproxima-se
+            masterGain.gain.linearRampToValueAtTime(0.32, ctx.currentTime + 6);  // chega
+
+            osc1.connect(gainMod);
+            gainMod.connect(masterGain);
+            noiseFilter.connect(masterGain);
+            masterGain.connect(ctx.destination);
+
+            osc1.start();
+            lfo.start();
+            noise.start();
+
+            this._heliCtx    = ctx;
+            this._heliGain   = masterGain;
+            this._heliAtivo  = true;
+        } catch(e) {
+            console.warn('Web Audio não disponível:', e);
+        }
+    }
+
+    _pararSomHelicoptero() {
+        if (!this._heliAtivo || !this._heliGain) return;
+        try {
+            this._heliGain.gain.linearRampToValueAtTime(0, this._heliCtx.currentTime + 1.5);
+            setTimeout(() => {
+                try { this._heliCtx.close(); } catch(e) {}
+                this._heliAtivo = false;
+            }, 1600);
+        } catch(e) {}
+    }
     _atualizarCamara(dt) {
         if (this._keyframes.length < 2) return;
 
@@ -238,7 +378,7 @@ export class GestorCutscene {
                 this.codecUI.iniciarDialogos([
                     { falante: 'General',  texto: 'Viper, confirma situação. Conseguiste sair?' },
                     { falante: 'Viper',    texto: 'Afirmativo. Saí pelo sector de esgotos. Estou no exterior.' },
-                    { falante: 'General',  texto: 'E o disco com os dados de SHADOW MOSES?' },
+                    { falante: 'General',  texto: 'E o disco com os dados de IRON CURTAIN?' },
                     { falante: 'Viper',    texto: 'Comigo. Intacto.' },
                     { falante: 'General',  texto: 'Bom trabalho, Viper. O teu ponto de extração é o telhado do edifício a Norte. Não te demores — as patrulhas vão estar em alerta máximo.' },
                     { falante: 'Viper',    texto: 'Entendido. Viper, out.' },
@@ -304,6 +444,10 @@ export class GestorCutscene {
             { t: 0.0, fn: () => {
                 this._moverJogador(posLanding, 3.0);
             }},
+            // Som do helicóptero começa ao longe
+            { t: 1.5, fn: () => {
+                this._iniciarSomHelicoptero();
+            }},
             // Começa a inclinar a cabeça para cima (flag — tratada no atualizar)
             { t: 2.8, fn: () => {
                 this._inclinarCabeca = true;
@@ -311,13 +455,14 @@ export class GestorCutscene {
             // Holofote aparece sobre a Viper
             { t: 3.5, fn: () => {
                 this._ativarHolofote(posLanding);
+                this._ativarVento();
             }},
             // Codec — general confirma extração
             { t: 4.5, fn: () => {
                 this.codecUI.iniciarDialogos([
                     { falante: 'General', texto: 'Viper, o Blackhawk está em aproximação. Trinta segundos.' },
                     { falante: 'Viper',   texto: '...' },
-                    { falante: 'General', texto: 'Missão cumprida, Viper. Descansa quando chegares.' },
+                    { falante: 'General', texto: 'Missão cumprida, Viper. Descansas quando chegares.' },
                     { falante: 'Viper',   texto: 'Já descansarei quando estiver morta.' },
                 ], () => this._terminarExtracao());
             }},
@@ -336,9 +481,10 @@ export class GestorCutscene {
 
     _terminarExtracao() {
         this.codecUI.mostrarEcraPreto(true);
-
-        // Desliga holofote via flag — o atualizar trata do fade
         this._holofoteIntensidadeAlvo = 0;
+        this._ventoAtivo = false;
+        this._vento.material.opacity = 0;
+        this._pararSomHelicoptero();
 
         setTimeout(() => {
             this._ativa = false;
@@ -382,7 +528,8 @@ export class GestorCutscene {
             }
         }
 
-        // Move jogador se necessário
+        // Vento do helicóptero
+        this._atualizarVento(dt);
         if (this._aMoverse) {
             this._tickMovimento(dt);
             this.jogador.atualizar(true);
@@ -405,7 +552,8 @@ export class GestorCutscene {
 
     destruir() {
         this.codecUI.destruir();
-        if (this._holofote) this.cena.remove(this._holofote);
+        if (this._holofote)   this.cena.remove(this._holofote);
         if (this._tampaGrupo) this.cena.remove(this._tampaGrupo);
+        if (this._vento)      this.cena.remove(this._vento);
     }
 }

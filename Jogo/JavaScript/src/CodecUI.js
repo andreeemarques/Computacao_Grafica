@@ -26,7 +26,7 @@ export class CodecUI {
                 bottom: 0;
                 left: 0;
                 width: 100%;
-                z-index: 1000;
+                z-index: 500;
                 font-family: 'Share Tech Mono', 'Courier New', monospace;
                 animation: codecEntrar 0.3s ease-out;
             }

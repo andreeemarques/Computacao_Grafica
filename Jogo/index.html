@@ -31,7 +31,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            z-index: 100;
+            z-index: 600;
             animation: flicker 8s infinite;
         }
 
@@ -157,12 +157,12 @@
         .menu-btn:hover::before { opacity: 1; }
         .menu-btn:active { background: rgba(0,255,65,0.15); }
 
-        /* ── Painéis de overlay (manual / objetivo) ── */
+        /* ── Painéis de overlay ── */
         .panel {
             display: none;
             position: fixed; inset: 0;
             background: rgba(0,0,0,0.92);
-            z-index: 200;
+            z-index: 650;
             align-items: center;
             justify-content: center;
         }
@@ -254,6 +254,7 @@
                 <div class="row"><span class="key">S</span> Mover para trás</div>
                 <div class="row"><span class="key">A</span> Mover para a esquerda</div>
                 <div class="row"><span class="key">D</span> Mover para a direita</div>
+                <div class="row"><span class="key">Z</span> Agachar / Levantar</div>
                 <div class="row"><span class="key">C</span> Alternar câmara (3ª pessoa / top-down)</div>
                 <div class="row"><span class="key">🖱</span> Rodar câmara (clicar para ativar)</div>
             </div>
@@ -266,10 +267,14 @@
         <div class="panel-box">
             <div class="panel-title">// Objetivo da Missão</div>
             <div class="panel-content">
-                Agente, a tua missão é infiltrares-te na zona de operações
-                sem seres detetado.<br><br>
-                Navega pelo cenário, evita os obstáculos e alcança o ponto
-                de extração designado.<br><br>
+                Viper, a tua missão é extrair o disco com os dados classificados
+                da <span style="color:#00ff41">Operação Iron Curtain</span> sem seres detetada.<br><br>
+                Recolhe as <span style="color:#00ff41">3 chaves</span> espalhadas pelo sector para poderes
+                aceder ao edifício objetivo.<br><br>
+                Quando tiveres todas as chaves, dirige-te ao
+                <span style="color:#00ff41">edifício a Norte</span> para completar a extração.<br><br>
+                Evita o contacto visual com os guardas a todo o custo.
+                Se fores detetada, a missão é considerada falhada.<br><br>
                 Boa sorte. Esta mensagem irá autodestruir-se.
             </div>
             <button class="panel-close" onclick="fecharPainel('panel-objetivo')">[ Fechar ]</button>
@@ -281,21 +286,23 @@
         <div class="panel-box">
             <div class="panel-title">// Missão Concluída</div>
             <div class="panel-content">
-                Ponto de extração atingido, agente.<br><br>
-                Infiltraste-te na zona de operações sem deixar rasto.
-                Os inimigos nunca souberam que estavas lá.<br><br>
+                Extração confirmada, Viper.<br><br>
+                Recuperaste o disco com os dados da Operação Iron Curtain
+                e saíste sem deixar rasto. As patrulhas nunca souberam que estavas lá.<br><br>
+                O Blackhawk já está em rota de regresso à base.<br><br>
                 Missão classificada como: <span style="color:#00ff41; letter-spacing:2px;">SUCESSO TOTAL</span><br><br>
-                Aguarda novas ordens.
+                Descansa, agente. Mereceste.
             </div>
             <button class="panel-close" onclick="voltarParaMenu()">[ Voltar ao menu ]</button>
         </div>
     </div>
 
+    <!-- ── PAINEL: MISSÃO FALHADA ── -->
     <div class="panel" id="panel-missao-falhada">
         <div class="panel-box">
             <div class="panel-title" style="color: #ff2200; border-bottom-color: rgba(255,34,0,0.25);">// Missão Falhada</div>
             <div class="panel-content" style="color: rgba(255,80,0,0.85);">
-                Foste detetado, agente.<br><br>
+                Foste detetada, Viper.<br><br>
                 A tua posição foi comprometida. Os inimigos estão em alerta máximo
                 e a operação foi cancelada.<br><br>
                 Estado da missão: <span style="color:#ff2200; letter-spacing:2px;">FALHA OPERACIONAL</span><br><br>
