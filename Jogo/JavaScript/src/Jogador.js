@@ -395,13 +395,13 @@ export class Jogador {
 
     // Amplitudes menores ao agachar (passo mais curto e contido)
     const novaPosY = 0.91 - a * 0.30;
-const pCoxaEsq   = this.partes.pivotCoxaEsq;
-const pCoxaDir   = this.partes.pivotCoxaDir;
-const pJoelhoEsq = this.partes.pivotJoelhoEsq;
-const pJoelhoDir = this.partes.pivotJoelhoDir;
+    const pCoxaEsq   = this.partes.pivotCoxaEsq;
+    const pCoxaDir   = this.partes.pivotCoxaDir;
+    const pJoelhoEsq = this.partes.pivotJoelhoEsq;
+    const pJoelhoDir = this.partes.pivotJoelhoDir;
 
-if (pCoxaEsq) pCoxaEsq.position.y = novaPosY;  // ← desce com o torso
-if (pCoxaDir) pCoxaDir.position.y = novaPosY;  // ← desce com o torso
+    if (pCoxaEsq) pCoxaEsq.position.y = novaPosY;  // ← desce com o torso
+    if (pCoxaDir) pCoxaDir.position.y = novaPosY;  // ← desce com o torso
 
 // Pose base de agacho:
 // - anca com rotação mínima (era 0.85 → causava levitação)

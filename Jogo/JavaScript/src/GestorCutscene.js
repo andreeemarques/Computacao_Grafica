@@ -463,7 +463,7 @@ export class GestorCutscene {
                     { falante: 'General', texto: 'Viper, o Blackhawk está em aproximação. Trinta segundos.' },
                     { falante: 'Viper',   texto: '...' },
                     { falante: 'General', texto: 'Missão cumprida, Viper. Descansas quando chegares.' },
-                    { falante: 'Viper',   texto: 'Já descansarei quando estiver morta.' },
+                    { falante: 'Viper',   texto: 'Só descansarei quando estiver morta.' },
                 ], () => this._terminarExtracao());
             }},
         ];
