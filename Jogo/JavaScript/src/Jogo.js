@@ -161,12 +161,12 @@ export class Jogo {
         if (this._cutsceneAtiva) return;
         if (!this._jogoAtivo) return;
 
-        if (event.which === 67) {
+        if (event.which === 86) {  // V - Alternar câmara
             this.cameraManager.alternar();
         } else if (event.key === 'l' || event.key === 'L') {
             const p = document.getElementById('painel-luzes');
             if (p) p.style.display = p.style.display === 'none' ? 'block' : 'none';
-        } else if (event.key === 'z' || event.key === 'Z') {
+        } else if (event.key === 'c' || event.key === 'C') {  // C - Agachar
             this.jogador.alternarAgacho();
         } else if ([87, 83, 65, 68].includes(event.which)) {
             this.teclasPressionadas.add(event.which);
