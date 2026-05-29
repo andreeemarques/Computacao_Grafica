@@ -151,33 +151,47 @@ export class GestorCutscene {
         this._vento      = new THREE.Points(geo, mat);
         this._ventoAtivo = false;
         this._ventoPosInicial = pos.slice();
+        this._ventoFrameCount = 0; // Otimização: atualizar a cada 2 frames
         this.cena.add(this._vento);
     }
 
     _ativarVento() {
         this._ventoAtivo = true;
         this._vento.material.opacity = 0.7;
+        this._ventoFrameCount = 0;
     }
 
     _atualizarVento(dt) {
         if (!this._ventoAtivo) return;
+        
+        // Atualizar apenas a cada 2 frames (otimização de performance)
+        this._ventoFrameCount++;
+        if (this._ventoFrameCount % 2 !== 0) return;
+
         const pos = this._vento.geometry.attributes.position.array;
         const N   = pos.length / 3;
+        const centerX = -13;
+        const centerZ = 2;
 
         for (let i = 0; i < N; i++) {
-            const dx = pos[i * 3]     - (-13);
-            const dz = pos[i * 3 + 2] -   2;
-            const dist = Math.sqrt(dx * dx + dz * dz) + 0.01;
+            const ix = i * 3;
+            const iy = i * 3 + 1;
+            const iz = i * 3 + 2;
+            
+            const dx = pos[ix] - centerX;
+            const dz = pos[iz] - centerZ;
+            const distSq = dx * dx + dz * dz;
+            
+            // Atualizar posição
+            pos[ix]     += (dx / (Math.sqrt(distSq) + 0.01)) * dt * 2.5 + (Math.random() - 0.5) * dt * 0.8;
+            pos[iy]     -= dt * 0.4;
+            pos[iz]     += (dz / (Math.sqrt(distSq) + 0.01)) * dt * 2.5 + (Math.random() - 0.5) * dt * 0.8;
 
-            pos[i * 3]     += (dx / dist) * dt * 2.5 + (Math.random() - 0.5) * dt * 0.8;
-            pos[i * 3 + 1] -= dt * 0.4;
-            pos[i * 3 + 2] += (dz / dist) * dt * 2.5 + (Math.random() - 0.5) * dt * 0.8;
-
-            if (dist > 7 || pos[i * 3 + 1] < 20.2) {
-                const idx = i * 3;
-                pos[idx]     = -13 + (Math.random() - 0.5) * 2;
-                pos[idx + 1] = 20.5 + Math.random() * 1.5;
-                pos[idx + 2] =   2  + (Math.random() - 0.5) * 2;
+            // Resetar partículas fora de alcance
+            if (distSq > 49 || pos[iy] < 20.2) {
+                pos[ix]     = centerX + (Math.random() - 0.5) * 2;
+                pos[iy]     = 20.5 + Math.random() * 1.5;
+                pos[iz]     = centerZ + (Math.random() - 0.5) * 2;
             }
         }
         this._vento.geometry.attributes.position.needsUpdate = true;

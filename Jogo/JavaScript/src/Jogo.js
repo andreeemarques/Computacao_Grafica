@@ -236,6 +236,12 @@ export class Jogo {
             const chave = this._chavesPendentes[i];
             chave.update(delta);
 
+            // Remove chaves que já completaram o desaparecimento
+            if (chave.apanhada) {
+                this._chavesPendentes.splice(i, 1);
+                continue;
+            }
+
             if (!chave.boxColisao || !jogadorBox) continue;
 
             const chaveCentro = chave.boxColisao.getCenter(this._tempVectorChaves);
@@ -245,8 +251,6 @@ export class Jogo {
             if (!jogadorBox.intersectsBox(chave.boxColisao)) continue;
 
             this.chavesApanhadas.add(chave.id);
-            this._chavesPendentes.splice(i, 1);
-
             chave.iniciarDesaparecimento();
         }
     }

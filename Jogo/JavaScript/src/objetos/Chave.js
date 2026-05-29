@@ -16,6 +16,7 @@ export class Chave {
         this.grupo = new THREE.Group();
         this.grupo.position.set(x, y, z);
 
+        this._meshes = []; // Cache dos meshes para otimização
         this._construir();
         cena.add(this.grupo);
 
@@ -42,6 +43,7 @@ export class Chave {
         corpo.position.set(-0.1, 0, 0);
         corpo.castShadow = true;
         this.grupo.add(corpo);
+        this._meshes.push(corpo);
 
         // Cabeça redonda da chave
         const geoCabeca = new THREE.SphereGeometry(0.15, 8, 8);
@@ -49,6 +51,7 @@ export class Chave {
         cabeca.position.set(-0.25, 0, 0);
         cabeca.castShadow = true;
         this.grupo.add(cabeca);
+        this._meshes.push(cabeca);
 
         // Dentes da chave (pequenos cubos)
         for (let i = 0; i < 3; i++) {
@@ -57,6 +60,7 @@ export class Chave {
             dente.position.set(0.15 + i * 0.1, -0.08, 0);
             dente.castShadow = true;
             this.grupo.add(dente);
+            this._meshes.push(dente);
         }
 
         // Ponto de luz para destaque
@@ -72,12 +76,12 @@ export class Chave {
             this._tempoFade += delta;
             const duracao = 0.4;
             const progress = Math.min(this._tempoFade / duracao, 1);
+            const opacity = 1 - progress;
 
-            this.grupo.traverse(mesh => {
-                if (mesh.material) {
-                    mesh.material.opacity = 1 - progress;
-                }
-            });
+            // Atualizar só os meshes em cache (muito mais rápido)
+            for (let i = 0; i < this._meshes.length; i++) {
+                this._meshes[i].material.opacity = opacity;
+            }
 
             if (progress >= 1) {
                 this.apanhar();
@@ -104,11 +108,12 @@ export class Chave {
      */
     iniciarDesaparecimento() {
         if (this._aFadeOut || this.apanhada) return;
-        this.grupo.traverse(mesh => {
-            if (mesh.material) {
-                mesh.material.transparent = true;
-            }
-        });
+        
+        // Definir transparent apenas nos meshes em cache (sem traverse)
+        for (let i = 0; i < this._meshes.length; i++) {
+            this._meshes[i].material.transparent = true;
+        }
+        
         this._aFadeOut = true;
         this._tempoFade = 0;
     }
