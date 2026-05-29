@@ -244,11 +244,24 @@ export class Jogo {
 
             if (!chave.boxColisao || !jogadorBox) continue;
 
-            const chaveCentro = chave.boxColisao.getCenter(this._tempVectorChaves);
-            const dx = jogadorPos.x - chaveCentro.x;
-            const dz = jogadorPos.z - chaveCentro.z;
-            if (dx * dx + dz * dz > RAIO_APANHA_CHAVE_SQ) continue;
-            if (!jogadorBox.intersectsBox(chave.boxColisao)) continue;
+            // Otimização: calcular distância direta em vez de usar getCenter()
+            const chaveBox = chave.boxColisao;
+            const chaveCenterX = (chaveBox.min.x + chaveBox.max.x) * 0.5;
+            const chaveCenterZ = (chaveBox.min.z + chaveBox.max.z) * 0.5;
+            
+            const dx = jogadorPos.x - chaveCenterX;
+            const dz = jogadorPos.z - chaveCenterZ;
+            const distSq = dx * dx + dz * dz;
+            const dist = Math.sqrt(distSq);
+            
+            // Atualizar proximidade (desativa luz quando perto para evitar lag)
+            chave.atualizarProximidadeJogador(dist);
+            
+            // Se está muito longe, skip
+            if (distSq > RAIO_APANHA_CHAVE_SQ) continue;
+            
+            // Apenas fazer collision check se passou no raio
+            if (!jogadorBox.intersectsBox(chaveBox)) continue;
 
             this.chavesApanhadas.add(chave.id);
             chave.iniciarDesaparecimento();

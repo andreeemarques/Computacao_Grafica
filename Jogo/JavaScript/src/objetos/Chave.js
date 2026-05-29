@@ -27,13 +27,15 @@ export class Chave {
     }
 
     _construir() {
-        // Material dourado para a chave
+        // Material dourado para a chave (criado POR CHAVE para evitar recompilação de shaders)
         const matOuro = new THREE.MeshStandardMaterial({
             color: 0xffd700,
             roughness: 0.3,
             metalness: 0.8,
             emissive: 0xffaa00,
             emissiveIntensity: 0.3,
+            transparent: true,  // ← Já definido aqui para evitar recompilação depois
+            opacity: 1.0,
         });
 
         // Corpo da chave (cilindro)
@@ -41,7 +43,6 @@ export class Chave {
         const corpo = new THREE.Mesh(geoCorpo, matOuro);
         corpo.rotation.z = Math.PI / 2;
         corpo.position.set(-0.1, 0, 0);
-        corpo.castShadow = true;
         this.grupo.add(corpo);
         this._meshes.push(corpo);
 
@@ -49,7 +50,6 @@ export class Chave {
         const geoCabeca = new THREE.SphereGeometry(0.15, 8, 8);
         const cabeca = new THREE.Mesh(geoCabeca, matOuro);
         cabeca.position.set(-0.25, 0, 0);
-        cabeca.castShadow = true;
         this.grupo.add(cabeca);
         this._meshes.push(cabeca);
 
@@ -58,15 +58,15 @@ export class Chave {
             const geoDente = new THREE.BoxGeometry(0.08, 0.06, 0.15);
             const dente = new THREE.Mesh(geoDente, matOuro);
             dente.position.set(0.15 + i * 0.1, -0.08, 0);
-            dente.castShadow = true;
             this.grupo.add(dente);
             this._meshes.push(dente);
         }
 
-        // Ponto de luz para destaque
-        const luz = new THREE.PointLight(0xffd700, 1, 8);
+        // Ponto de luz para destaque (será desativada no fade-out)
+        const luz = new THREE.PointLight(0xffd700, 0.15, 8);  // ← Intensidade ao mínimo (0.15)
         luz.position.set(0, 0.3, 0);
         this.grupo.add(luz);
+        this._luz = luz;
     }
 
     update(delta) {
@@ -104,14 +104,23 @@ export class Chave {
     }
 
     /**
+     * Atualiza proximidade do jogador (chamado externamente)
+     * A luz já está ao mínimo por defeito, este método pode ser used para lógica futura se necessário
+     */
+    atualizarProximidadeJogador(distanciaAoJogador) {
+        // Luz já está ao mínimo (0.15) no construtor
+        // Este espaço fica reservado para lógica futura se precisares
+    }
+
+    /**
      * Inicia fade-out e remove após animação
      */
     iniciarDesaparecimento() {
         if (this._aFadeOut || this.apanhada) return;
         
-        // Definir transparent apenas nos meshes em cache (sem traverse)
-        for (let i = 0; i < this._meshes.length; i++) {
-            this._meshes[i].material.transparent = true;
+        // Desativar luz para não atualizar iluminação da cena
+        if (this._luz) {
+            this._luz.visible = false;
         }
         
         this._aFadeOut = true;
