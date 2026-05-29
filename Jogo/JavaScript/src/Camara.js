@@ -191,6 +191,22 @@ export class CamaraManager {
         this.cameraTerceiraPessoa.ativar(); // Ativa a câmara inicial
     }
 
+    /**
+     * Define qual câmara usar no início do jogo
+     * @param {string} tipo - 'terceira' ou 'topdown'
+     */
+    definirCamaraInicial(tipo) {
+        this.cameraAtual.desativar();
+        
+        if (tipo === 'topdown') {
+            this.cameraAtual = this.cameraTopDown;
+        } else {
+            this.cameraAtual = this.cameraTerceiraPessoa;
+        }
+        
+        this.cameraAtual.ativar();
+    }
+
     alternar() {
         this.cameraAtual.desativar();
         this.cameraAtual = (this.cameraAtual === this.cameraTopDown)

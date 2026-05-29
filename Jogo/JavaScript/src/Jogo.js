@@ -21,6 +21,11 @@ export class Jogo {
         this.cenario        = new Cenario(this.cena, this.gestorColisoes);
         this.jogador        = new Jogador(this.cena, this.gestorColisoes);
         this.cameraManager  = new CamaraManager(this.renderer, this.gestorColisoes);
+        
+        // Definir a câmara inicial escolhida no menu
+        const camaraInicial = window.obterCamaraInicial?.() || 'terceira';
+        this.cameraManager.definirCamaraInicial(camaraInicial);
+        
         this.uiLuzes        = new UILuzes(this.gestorLuzes);
         this.gestorNPCs     = new GestorNPCs(this.cena, this.gestorColisoes);
 
