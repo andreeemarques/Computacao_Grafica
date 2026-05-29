@@ -19,7 +19,16 @@ export class Jogador {
         this.boxColisao = this._boxNaPosicao(this.posicao);
 
         this.agachado = false;
-        this._transicaoAgacho = 0; // 0 = em pé, 1 = agachado (lerp suave)
+        this._transicaoAgacho = 0;
+
+        this._v3Forward = new THREE.Vector3();
+        this._v3Right = new THREE.Vector3();
+        this._v3Delta = new THREE.Vector3();
+        this._v3PosAtual = new THREE.Vector3();
+        this._v3PosTotal = new THREE.Vector3();
+        this._v3PosSoX = new THREE.Vector3();
+        this._v3PosSoZ = new THREE.Vector3();
+        this._v3PosParcial = new THREE.Vector3();
     }
 
     // ── Materiais ──────────────────────────────────────────
@@ -33,31 +42,34 @@ export class Jogador {
     _matSola()    { return new THREE.MeshStandardMaterial({ color: 0x0d0d0d, roughness: 0.95 }); }
 
     _criarTexturaCamuflagem() {
-        const W = 256, H = 256;
-        const canvas = document.createElement('canvas');
-        canvas.width = W; canvas.height = H;
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#1a1f1a';
-        ctx.fillRect(0, 0, W, H);
-        const cores = ['rgba(12,16,12,0.9)', 'rgba(28,36,24,0.85)', 'rgba(35,42,30,0.75)'];
-        for (let i = 0; i < 90; i++) {
-            const cx = Math.random() * W;
-            const cy = Math.random() * H;
-            const rx = 10 + Math.random() * 38;
-            const ry = 6  + Math.random() * 22;
-            ctx.save();
-            ctx.translate(cx, cy);
-            ctx.rotate(Math.random() * Math.PI);
-            ctx.beginPath();
-            ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
-            ctx.fillStyle = cores[Math.floor(Math.random() * cores.length)];
-            ctx.fill();
-            ctx.restore();
+        if (!Jogador._texturaCamuflagem) {
+            const W = 256, H = 256;
+            const canvas = document.createElement('canvas');
+            canvas.width = W; canvas.height = H;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#1a1f1a';
+            ctx.fillRect(0, 0, W, H);
+            const cores = ['rgba(12,16,12,0.9)', 'rgba(28,36,24,0.85)', 'rgba(35,42,30,0.75)'];
+            for (let i = 0; i < 90; i++) {
+                const cx = Math.random() * W;
+                const cy = Math.random() * H;
+                const rx = 10 + Math.random() * 38;
+                const ry = 6  + Math.random() * 22;
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.rotate(Math.random() * Math.PI);
+                ctx.beginPath();
+                ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+                ctx.fillStyle = cores[Math.floor(Math.random() * cores.length)];
+                ctx.fill();
+                ctx.restore();
+            }
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+            tex.repeat.set(2, 3);
+            Jogador._texturaCamuflagem = tex;
         }
-        const tex = new THREE.CanvasTexture(canvas);
-        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-        tex.repeat.set(2, 3);
-        return tex;
+        return Jogador._texturaCamuflagem;
     }
 
     _criarCapsule(radius, length, radialSegments = 8) {
@@ -473,45 +485,45 @@ if (pTorso) {
     }
 
     mover(cameraAngle, teclas) {
-        const forward = new THREE.Vector3(-Math.sin(cameraAngle), 0, -Math.cos(cameraAngle));
-        const right   = new THREE.Vector3(-Math.cos(cameraAngle), 0,  Math.sin(cameraAngle));
+        this._v3Forward.set(-Math.sin(cameraAngle), 0, -Math.cos(cameraAngle));
+        this._v3Right.set(-Math.cos(cameraAngle), 0, Math.sin(cameraAngle));
         const velocidade = this.agachado ? 0.07 : 0.15;
 
-        let delta = new THREE.Vector3();
+        this._v3Delta.set(0, 0, 0);
         teclas.forEach(tecla => {
-            if (tecla === 87) delta.add(forward);
-            if (tecla === 83) delta.sub(forward);
-            if (tecla === 65) delta.add(right);
-            if (tecla === 68) delta.sub(right);
+            if (tecla === 87) this._v3Delta.add(this._v3Forward);
+            if (tecla === 83) this._v3Delta.sub(this._v3Forward);
+            if (tecla === 65) this._v3Delta.add(this._v3Right);
+            if (tecla === 68) this._v3Delta.sub(this._v3Right);
         });
 
-        if (delta.lengthSq() === 0) return;
+        if (this._v3Delta.lengthSq() === 0) return;
 
-        delta.normalize().multiplyScalar(velocidade);
-        this.ultimaDirecao.copy(delta).normalize();
+        this._v3Delta.normalize().multiplyScalar(velocidade);
+        this.ultimaDirecao.copy(this._v3Delta).normalize();
 
-        const posAtual = this.grupo.position.clone();
-        const posTotal = posAtual.clone().add(delta);
-        if (!this.gestorColisoes.colide(this._boxNaPosicao(posTotal))) {
-            this.grupo.position.copy(posTotal);
+        this._v3PosAtual.copy(this.grupo.position);
+        this._v3PosTotal.copy(this._v3PosAtual).add(this._v3Delta);
+        if (!this.gestorColisoes.colide(this._boxNaPosicao(this._v3PosTotal))) {
+            this.grupo.position.copy(this._v3PosTotal);
             return;
         }
 
-        const posSoX = posAtual.clone().add(new THREE.Vector3(delta.x, 0, 0));
-        if (!this.gestorColisoes.colide(this._boxNaPosicao(posSoX))) {
-            this.grupo.position.copy(posSoX);
+        this._v3PosSoX.copy(this._v3PosAtual).add(new THREE.Vector3(this._v3Delta.x, 0, 0));
+        if (!this.gestorColisoes.colide(this._boxNaPosicao(this._v3PosSoX))) {
+            this.grupo.position.copy(this._v3PosSoX);
             return;
         }
 
-        const posSoZ = posAtual.clone().add(new THREE.Vector3(0, 0, delta.z));
-        if (!this.gestorColisoes.colide(this._boxNaPosicao(posSoZ))) {
-            this.grupo.position.copy(posSoZ);
+        this._v3PosSoZ.copy(this._v3PosAtual).add(new THREE.Vector3(0, 0, this._v3Delta.z));
+        if (!this.gestorColisoes.colide(this._boxNaPosicao(this._v3PosSoZ))) {
+            this.grupo.position.copy(this._v3PosSoZ);
             return;
         }
 
-        const posParcial = posAtual.clone().add(delta.clone().multiplyScalar(0.5));
-        if (!this.gestorColisoes.colide(this._boxNaPosicao(posParcial))) {
-            this.grupo.position.copy(posParcial);
+        this._v3PosParcial.copy(this._v3PosAtual).add(this._v3Delta.clone().multiplyScalar(0.5));
+        if (!this.gestorColisoes.colide(this._boxNaPosicao(this._v3PosParcial))) {
+            this.grupo.position.copy(this._v3PosParcial);
         }
     }
 

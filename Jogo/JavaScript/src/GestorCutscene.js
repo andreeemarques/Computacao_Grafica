@@ -129,7 +129,7 @@ export class GestorCutscene {
 
     // ── Vento do Helicóptero ────────────────────────────────
     _criarVento() {
-        const N = 120;
+        const N = 60;
         const geo = new THREE.BufferGeometry();
         const pos = new Float32Array(N * 3);
 

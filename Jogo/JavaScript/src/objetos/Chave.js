@@ -19,9 +19,10 @@ export class Chave {
         this._construir();
         cena.add(this.grupo);
 
-        // Box de colisão - será inicializada após construir
         this.boxColisao = new THREE.Box3();
         this.boxColisao.setFromObject(this.grupo);
+        this._aFadeOut = false;
+        this._tempoFade = 0;
     }
 
     _construir() {
@@ -67,6 +68,23 @@ export class Chave {
     update(delta) {
         if (this.apanhada) return;
 
+        if (this._aFadeOut) {
+            this._tempoFade += delta;
+            const duracao = 0.4;
+            const progress = Math.min(this._tempoFade / duracao, 1);
+
+            this.grupo.traverse(mesh => {
+                if (mesh.material) {
+                    mesh.material.opacity = 1 - progress;
+                }
+            });
+
+            if (progress >= 1) {
+                this.apanhar();
+            }
+            return;
+        }
+
         this.grupo.rotation.y += Math.PI * delta;
 
         const tempoSegundos = Date.now() * 0.001;
@@ -76,7 +94,23 @@ export class Chave {
         }
         this.grupo.position.y = posicaoY + Math.sin(tempoSegundos) * 0.3;
 
-        this.boxColisao.setFromObject(this.grupo, true);
+        const r = 0.2;
+        this.boxColisao.min.set(this.grupo.position.x - r, this.grupo.position.y - r, this.grupo.position.z - r);
+        this.boxColisao.max.set(this.grupo.position.x + r, this.grupo.position.y + r, this.grupo.position.z + r);
+    }
+
+    /**
+     * Inicia fade-out e remove após animação
+     */
+    iniciarDesaparecimento() {
+        if (this._aFadeOut || this.apanhada) return;
+        this.grupo.traverse(mesh => {
+            if (mesh.material) {
+                mesh.material.transparent = true;
+            }
+        });
+        this._aFadeOut = true;
+        this._tempoFade = 0;
     }
 
     /**

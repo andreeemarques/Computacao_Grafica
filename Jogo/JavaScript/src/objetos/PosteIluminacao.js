@@ -7,15 +7,13 @@ export class PosteIluminacao {
         this.grupo.position.set(x, 0, z);
         cena.add(this.grupo);
 
-        // ── PointLight no topo do poste ──
         this.luz = new THREE.PointLight(cor, intensidade, alcance);
         this.luz.position.set(x, 7.4, z);
-        this.luz.castShadow = true;
-        this.luz.shadow.mapSize.set(512, 512);
+        this.luz.castShadow = false;
         cena.add(this.luz);
 
-        // Guarda intensidade original para ligar/desligar
         this._intensidade = intensidade;
+        this._difusor = null;
     }
 
     _construir(cor) {
@@ -37,7 +35,6 @@ export class PosteIluminacao {
             roughness: 0.2,
         });
 
-        // ── Base ──
         const base = new THREE.Mesh(
             new THREE.CylinderGeometry(0.2, 0.25, 0.3, 8),
             matPoste
@@ -46,7 +43,6 @@ export class PosteIluminacao {
         base.castShadow = true;
         this.grupo.add(base);
 
-        // ── Fuste (poste vertical) ──
         const fuste = new THREE.Mesh(
             new THREE.CylinderGeometry(0.06, 0.09, 7, 8),
             matPoste
@@ -55,7 +51,6 @@ export class PosteIluminacao {
         fuste.castShadow = true;
         this.grupo.add(fuste);
 
-        // ── Braço curvo (feito de 2 peças) ──
         const bracoPrincipal = new THREE.Mesh(
             new THREE.CylinderGeometry(0.04, 0.04, 1.4, 6),
             matPoste
@@ -74,7 +69,6 @@ export class PosteIluminacao {
         bracoHorizontal.castShadow = true;
         this.grupo.add(bracoHorizontal);
 
-        // ── Carcaça da luminária ──
         const carcaca = new THREE.Mesh(
             new THREE.BoxGeometry(0.5, 0.15, 0.25),
             matCarcaca
@@ -83,15 +77,14 @@ export class PosteIluminacao {
         carcaca.castShadow = true;
         this.grupo.add(carcaca);
 
-        // ── Difusor (vidro da lâmpada) ──
         const difusor = new THREE.Mesh(
             new THREE.BoxGeometry(0.38, 0.08, 0.18),
             matLampada
         );
         difusor.position.set(1.4, 7.35, 0);
         this.grupo.add(difusor);
+        this._difusor = difusor;
 
-        // ── Anel de reforço no fuste ──
         [2.5, 5.0].forEach(y => {
             const anel = new THREE.Mesh(
                 new THREE.TorusGeometry(0.1, 0.025, 6, 12),
@@ -105,21 +98,16 @@ export class PosteIluminacao {
 
     ligar() {
         this.luz.intensity = this._intensidade;
-        // Reativa emissive da lâmpada
-        this.grupo.traverse(obj => {
-            if (obj.isMesh && obj.material.emissiveIntensity !== undefined) {
-                obj.material.emissiveIntensity = 1.2;
-            }
-        });
+        if (this._difusor?.material) {
+            this._difusor.material.emissiveIntensity = 1.2;
+        }
     }
 
     desligar() {
         this.luz.intensity = 0;
-        this.grupo.traverse(obj => {
-            if (obj.isMesh && obj.material.emissiveIntensity !== undefined) {
-                obj.material.emissiveIntensity = 0;
-            }
-        });
+        if (this._difusor?.material) {
+            this._difusor.material.emissiveIntensity = 0;
+        }
     }
 
     get estaLigado() {

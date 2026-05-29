@@ -78,27 +78,30 @@ export class NPC {
     _matCapacete(){ return new THREE.MeshStandardMaterial({ color: 0x2a2f28, roughness: 0.6,  metalness: 0.2  }); }
 
     _criarTexturaCamuflagem() {
-        const W = 256, H = 256;
-        const canvas = document.createElement('canvas');
-        canvas.width = W; canvas.height = H;
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#3a3f3a';
-        ctx.fillRect(0, 0, W, H);
-        const cores = ['rgba(30,38,28,0.9)', 'rgba(50,58,44,0.85)', 'rgba(42,50,38,0.75)'];
-        for (let i = 0; i < 90; i++) {
-            ctx.save();
-            ctx.translate(Math.random() * W, Math.random() * H);
-            ctx.rotate(Math.random() * Math.PI);
-            ctx.beginPath();
-            ctx.ellipse(0, 0, 10 + Math.random() * 38, 6 + Math.random() * 22, 0, 0, Math.PI * 2);
-            ctx.fillStyle = cores[Math.floor(Math.random() * cores.length)];
-            ctx.fill();
-            ctx.restore();
+        if (!NPC._texturaCamuflagem) {
+            const W = 256, H = 256;
+            const canvas = document.createElement('canvas');
+            canvas.width = W; canvas.height = H;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#3a3f3a';
+            ctx.fillRect(0, 0, W, H);
+            const cores = ['rgba(30,38,28,0.9)', 'rgba(50,58,44,0.85)', 'rgba(42,50,38,0.75)'];
+            for (let i = 0; i < 90; i++) {
+                ctx.save();
+                ctx.translate(Math.random() * W, Math.random() * H);
+                ctx.rotate(Math.random() * Math.PI);
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 10 + Math.random() * 38, 6 + Math.random() * 22, 0, 0, Math.PI * 2);
+                ctx.fillStyle = cores[Math.floor(Math.random() * cores.length)];
+                ctx.fill();
+                ctx.restore();
+            }
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+            tex.repeat.set(2, 3);
+            NPC._texturaCamuflagem = tex;
         }
-        const tex = new THREE.CanvasTexture(canvas);
-        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-        tex.repeat.set(2, 3);
-        return tex;
+        return NPC._texturaCamuflagem;
     }
 
     // ══════════════════════════════════════════

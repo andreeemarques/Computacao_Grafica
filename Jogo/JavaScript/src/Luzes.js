@@ -33,15 +33,15 @@ export class GestorLuzes {
 
         // ── Postes com PointLight ──
         this.postes = [
-            new PosteIluminacao(cena, 26.7,  20, 0xffaa44, 20, 25),
-            new PosteIluminacao(cena, 26.7,  40, 0xffaa44, 20, 25),
-            new PosteIluminacao(cena, 45.5,  20, 0xffaa44, 20, 25),
-            new PosteIluminacao(cena, 45.5,  40, 0xffaa44, 20, 25),
-            new PosteIluminacao(cena, 10,    17, 0xffaa44, 20, 25),
-            new PosteIluminacao(cena, 10,    33, 0xffaa44, 20, 25),
-            new PosteIluminacao(cena, -15,   45, 0xffaa44, 20, 25),
-            new PosteIluminacao(cena, -34,   35, 0xffaa44, 20, 25),
-            new PosteIluminacao(cena, -15,   20, 0xffaa44, 20, 25),
+            new PosteIluminacao(cena, 26.7,  20, 0xffaa44, 15, 18),
+            new PosteIluminacao(cena, 26.7,  40, 0xffaa44, 15, 18),
+            new PosteIluminacao(cena, 45.5,  20, 0xffaa44, 15, 18),
+            new PosteIluminacao(cena, 45.5,  40, 0xffaa44, 15, 18),
+            new PosteIluminacao(cena, 10,    17, 0xffaa44, 15, 18),
+            new PosteIluminacao(cena, 10,    33, 0xffaa44, 15, 18),
+            new PosteIluminacao(cena, -15,   45, 0xffaa44, 15, 18),
+            new PosteIluminacao(cena, -34,   35, 0xffaa44, 15, 18),
+            new PosteIluminacao(cena, -15,   20, 0xffaa44, 15, 18),
         ];
 
         // Registar colisões para os postes (apenas base e fuste)

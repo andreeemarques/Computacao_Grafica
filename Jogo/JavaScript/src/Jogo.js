@@ -247,10 +247,7 @@ export class Jogo {
             this.chavesApanhadas.add(chave.id);
             this._chavesPendentes.splice(i, 1);
 
-            if (chave.grupo) chave.grupo.visible = false;
-            if (chave.mesh)  chave.mesh.visible  = false;
-
-            setTimeout(() => chave.apanhar(), 2000);
+            chave.iniciarDesaparecimento();
         }
     }
 
