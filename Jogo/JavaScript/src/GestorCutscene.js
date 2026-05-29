@@ -14,25 +14,20 @@ export class GestorCutscene {
         this._passos       = [];
         this._passoAtual   = 0;
 
-        // Câmara cinematográfica dedicada (não usa a do jogo)
         this._camaraCine   = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 5000);
         this._camAlvo      = new THREE.Vector3();
         this._camPos       = new THREE.Vector3();
         this._camPosAlvo   = new THREE.Vector3();
         this._keyframes    = [];
 
-        // Tampa do esgoto
         this._tampa        = null;
         this._tampaCriada  = false;
 
-        // Holofote de extração
         this._holofote     = null;
         this._holofoteAlvo = new THREE.Vector3();
 
-        // UI
         this.codecUI = new CodecUI();
 
-        // Callbacks externos
         this._onFimEntrada  = null;
         this._onFimExtracao = null;
 
@@ -49,7 +44,6 @@ export class GestorCutscene {
 
     get ativa() { return this._ativa; }
 
-    // Câmara a usar durante cutscene
     get camara() { return this._camaraCine; }
 
     // ── Tampa do Esgoto ─────────────────────────────────────
@@ -57,14 +51,12 @@ export class GestorCutscene {
         const grupo = new THREE.Group();
         grupo.position.set(44, 0, 49);
 
-        // Buraco no chão (disco escuro)
         const geoFundo = new THREE.CylinderGeometry(0.7, 0.7, 0.05, 20);
         const matFundo = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 1 });
         const fundo = new THREE.Mesh(geoFundo, matFundo);
         fundo.position.y = -0.02;
         grupo.add(fundo);
 
-        // Aro metálico
         const geoAro = new THREE.TorusGeometry(0.72, 0.06, 8, 24);
         const matMetal = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.3, metalness: 0.8 });
         const aro = new THREE.Mesh(geoAro, matMetal);
@@ -72,13 +64,11 @@ export class GestorCutscene {
         aro.position.y = 0.03;
         grupo.add(aro);
 
-        // Tampa circular
         const geoCap = new THREE.CylinderGeometry(0.68, 0.68, 0.08, 20);
         const matCap = new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.5, metalness: 0.7 });
         const cap = new THREE.Mesh(geoCap, matCap);
         cap.position.y = 0.04;
 
-        // Padrão na tampa (grelha)
         const matGrelha = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.6, metalness: 0.5 });
         for (let i = -2; i <= 2; i++) {
             const bar = new THREE.Mesh(
@@ -90,21 +80,20 @@ export class GestorCutscene {
         }
 
         grupo.add(cap);
-        this._tampaMesh = cap; // a parte que abre
+        this._tampaMesh = cap;
         this._tampaGrupo = grupo;
         this._tampaAberta = false;
 
         this.cena.add(grupo);
     }
 
-    // Anima a tampa a abrir (pivota para o lado)
     _abrirTampa(duracaoMs) {
         if (this._tampaAberta) return;
         this._tampaAberta = true;
         const inicio = Date.now();
         const rodar = () => {
             const t = Math.min((Date.now() - inicio) / duracaoMs, 1);
-            const ease = t < 0.5 ? 2*t*t : -1+(4-2*t)*t; // easeInOut
+            const ease = t < 0.5 ? 2*t*t : -1+(4-2*t)*t;
             this._tampaMesh.rotation.z = ease * (Math.PI / 1.8);
             this._tampaMesh.position.x = ease * 0.5;
             this._tampaMesh.position.y = 0.04 + ease * 0.3;
@@ -115,7 +104,6 @@ export class GestorCutscene {
 
     // ── Holofote de Extração ────────────────────────────────
     _criarHolofote() {
-        // Ângulo muito mais fechado (PI/20) = feixe concentrado na Viper
         const spot = new THREE.SpotLight(0xddeeff, 0, 0, Math.PI / 20, 0.15);
         spot.position.set(-13, 50, 2);
         spot.castShadow = false;
@@ -145,7 +133,6 @@ export class GestorCutscene {
         const geo = new THREE.BufferGeometry();
         const pos = new Float32Array(N * 3);
 
-        // Partículas espalhadas em torno do ponto de extração
         for (let i = 0; i < N; i++) {
             pos[i * 3]     = -13 + (Math.random() - 0.5) * 8;
             pos[i * 3 + 1] = 20.5 + Math.random() * 3;
@@ -163,7 +150,7 @@ export class GestorCutscene {
 
         this._vento      = new THREE.Points(geo, mat);
         this._ventoAtivo = false;
-        this._ventoPosInicial = pos.slice(); // cópia das posições iniciais
+        this._ventoPosInicial = pos.slice();
         this.cena.add(this._vento);
     }
 
@@ -178,16 +165,14 @@ export class GestorCutscene {
         const N   = pos.length / 3;
 
         for (let i = 0; i < N; i++) {
-            // Vento radial para fora do centro + ligeiro caos
             const dx = pos[i * 3]     - (-13);
             const dz = pos[i * 3 + 2] -   2;
             const dist = Math.sqrt(dx * dx + dz * dz) + 0.01;
 
             pos[i * 3]     += (dx / dist) * dt * 2.5 + (Math.random() - 0.5) * dt * 0.8;
-            pos[i * 3 + 1] -= dt * 0.4; // cai ligeiramente
+            pos[i * 3 + 1] -= dt * 0.4;
             pos[i * 3 + 2] += (dz / dist) * dt * 2.5 + (Math.random() - 0.5) * dt * 0.8;
 
-            // Reinicia partícula se sair muito longe ou cair abaixo do telhado
             if (dist > 7 || pos[i * 3 + 1] < 20.2) {
                 const idx = i * 3;
                 pos[idx]     = -13 + (Math.random() - 0.5) * 2;
@@ -198,89 +183,67 @@ export class GestorCutscene {
         this._vento.geometry.attributes.position.needsUpdate = true;
     }
 
-    // ── Som sintético do Helicóptero (Web Audio API) ────────
+    // ── Som do Helicóptero (ficheiro de áudio) ──────────────
     _criarSomHelicoptero() {
-        this._heliAudio  = null;
-        this._heliGain   = null;
-        this._heliAtivo  = false;
+        this._heliAudio = new Audio('./Helicoptero.mp3');
+        this._heliAudio.loop = true;
+        this._heliAudio.volume = 0;
+        this._heliAtivo = false;
+        this._heliFadeAtivo = false;
     }
 
     _iniciarSomHelicoptero() {
-        try {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        if (this._heliAtivo) return;
+        this._heliAtivo = true;
+        this._heliAudio.currentTime = 0;
+        this._heliAudio.volume = 0;
 
-            // Rotor principal — onda baixa pulsante
-            const osc1 = ctx.createOscillator();
-            osc1.type = 'sawtooth';
-            osc1.frequency.setValueAtTime(18, ctx.currentTime); // Hz muito baixo = rotor
-            osc1.frequency.linearRampToValueAtTime(22, ctx.currentTime + 6); // acelera ao aproximar
+        // Tenta reproduzir (pode ser bloqueado pelo browser sem interação prévia,
+        // mas neste caso o jogador já clicou para iniciar o jogo)
+        this._heliAudio.play().catch(e => {
+            console.warn('Não foi possível reproduzir o som do helicóptero:', e);
+        });
 
-            // Modulação de amplitude — cria o efeito "thump thump"
-            const lfo = ctx.createOscillator();
-            lfo.type = 'sine';
-            lfo.frequency.setValueAtTime(6.5, ctx.currentTime);  // 6.5 pás/s
-            lfo.frequency.linearRampToValueAtTime(8, ctx.currentTime + 6);
-
-            const lfoGain = ctx.createGain();
-            lfoGain.gain.value = 0.5;
-            lfo.connect(lfoGain);
-
-            const gainMod = ctx.createGain();
-            gainMod.gain.value = 0.5;
-            lfoGain.connect(gainMod.gain);
-
-            // Ruído de turbina por cima
-            const bufferSize = ctx.sampleRate * 2;
-            const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-            const data   = buffer.getChannelData(0);
-            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-            const noise  = ctx.createBufferSource();
-            noise.buffer = buffer;
-            noise.loop   = true;
-
-            const noiseFilter = ctx.createBiquadFilter();
-            noiseFilter.type = 'bandpass';
-            noiseFilter.frequency.value = 180;
-            noiseFilter.Q.value = 0.8;
-            noise.connect(noiseFilter);
-
-            // Gain master — começa mudo e sobe (helicóptero ao longe)
-            const masterGain = ctx.createGain();
-            masterGain.gain.setValueAtTime(0, ctx.currentTime);
-            masterGain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + 3);  // aproxima-se
-            masterGain.gain.linearRampToValueAtTime(0.32, ctx.currentTime + 6);  // chega
-
-            osc1.connect(gainMod);
-            gainMod.connect(masterGain);
-            noiseFilter.connect(masterGain);
-            masterGain.connect(ctx.destination);
-
-            osc1.start();
-            lfo.start();
-            noise.start();
-
-            this._heliCtx    = ctx;
-            this._heliGain   = masterGain;
-            this._heliAtivo  = true;
-        } catch(e) {
-            console.warn('Web Audio não disponível:', e);
-        }
+        // Fade in gradual — sobe o volume ao longo de 4 segundos
+        this._heliFadeAlvo  = 0.8;  // volume máximo (0.0 a 1.0)
+        this._heliFadeVel   = 0.8 / 4.0; // unidades por segundo
+        this._heliFadeAtivo = true;
     }
 
     _pararSomHelicoptero() {
-        if (!this._heliAtivo || !this._heliGain) return;
-        try {
-            this._heliGain.gain.linearRampToValueAtTime(0, this._heliCtx.currentTime + 1.5);
-            setTimeout(() => {
-                try { this._heliCtx.close(); } catch(e) {}
+        if (!this._heliAtivo) return;
+        // Fade out — desce o volume ao longo de 1.5 segundos
+        this._heliFadeAlvo  = 0;
+        this._heliFadeVel   = this._heliAudio.volume / 1.5;
+        this._heliFadeAtivo = true;
+
+        // Para mesmo o áudio quando o volume chegar a zero
+        const verificar = setInterval(() => {
+            if (this._heliAudio.volume <= 0.01) {
+                this._heliAudio.pause();
+                this._heliAudio.currentTime = 0;
                 this._heliAtivo = false;
-            }, 1600);
-        } catch(e) {}
+                clearInterval(verificar);
+            }
+        }, 100);
     }
+
+    // ── Fade do volume — chamado no atualizar() ─────────────
+    _atualizarSomHelicoptero(dt) {
+        if (!this._heliFadeAtivo) return;
+        const vol = this._heliAudio.volume;
+        if (vol < this._heliFadeAlvo) {
+            this._heliAudio.volume = Math.min(vol + this._heliFadeVel * dt, this._heliFadeAlvo);
+        } else if (vol > this._heliFadeAlvo) {
+            this._heliAudio.volume = Math.max(vol - this._heliFadeVel * dt, this._heliFadeAlvo);
+        } else {
+            this._heliFadeAtivo = false;
+        }
+    }
+
     _atualizarCamara(dt) {
         if (this._keyframes.length < 2) return;
 
-        // Encontra os dois keyframes à volta do tempo atual
         let kA = this._keyframes[0];
         let kB = this._keyframes[1];
         for (let i = 0; i < this._keyframes.length - 1; i++) {
@@ -294,7 +257,6 @@ export class GestorCutscene {
         const span = kB.t - kA.t;
         const local = Math.max(0, this._tempo - kA.t);
         const raw = span > 0 ? Math.min(local / span, 1) : 1;
-        // easeInOut suave
         const t = raw < 0.5 ? 2*raw*raw : -1+(4-2*raw)*raw;
 
         this._camPos.lerpVectors(kA.pos, kB.pos, t);
@@ -304,11 +266,10 @@ export class GestorCutscene {
         this._camaraCine.lookAt(this._camAlvo);
     }
 
-    // ── Mover jogador na cutscene ───────────────────────────
     _moverJogador(destino, velocidade) {
-        this._destino   = destino.clone();
+        this._destino    = destino.clone();
         this._velocidade = velocidade;
-        this._aMoverse  = true;
+        this._aMoverse   = true;
     }
 
     _tickMovimento(dt) {
@@ -324,7 +285,6 @@ export class GestorCutscene {
         dir.normalize().multiplyScalar(this._velocidade * dt);
         this.jogador.grupo.position.add(dir);
 
-        // Orienta o jogador para o destino
         const alvo = this.jogador.grupo.position.clone().add(dir);
         this.jogador.grupo.lookAt(alvo.x, this.jogador.grupo.position.y, alvo.z);
     }
@@ -333,16 +293,13 @@ export class GestorCutscene {
     iniciarEntrada(onFim) {
         this._onFimEntrada = onFim;
 
-        const posEsgoto = new THREE.Vector3(44, 0, 49);
-        const posAposSubir = new THREE.Vector3(44, 0, 47); // ligeiramente à frente
+        const posEsgoto    = new THREE.Vector3(44, 0, 49);
+        const posAposSubir = new THREE.Vector3(44, 0, 47);
 
-        // Coloca o jogador na posição inicial (dentro do esgoto, invisível)
         this.jogador.grupo.position.copy(posEsgoto);
-        this.jogador.grupo.position.y = -2; // começa abaixo do chão
+        this.jogador.grupo.position.y = -2;
         this.jogador.grupo.visible = false;
 
-        // Câmara deslocada ~60° para a direita (perspetiva lateral)
-        // O alvo continua na tampa — a câmara orbita pelo lado esquerdo
         this._keyframes = [
             { t: 0.0, pos: new THREE.Vector3(30, 10, 52), alvo: posEsgoto.clone() },
             { t: 2.0, pos: new THREE.Vector3(32,  6, 50), alvo: posEsgoto.clone() },
@@ -352,28 +309,14 @@ export class GestorCutscene {
         ];
 
         this._passos = [
-            // Ecrã preto inicial
-            { t: 0.0, fn: () => {
-                this.codecUI.mostrarEcraPreto(true);
-            }},
-            // Fade out do ecrã preto
-            { t: 0.8, fn: () => {
-                this.codecUI.mostrarEcraPreto(false);
-            }},
-            // Tampa começa a abrir
-            { t: 1.2, fn: () => {
-                this._abrirTampa(1200);
-            }},
-            // Jogador sobe
+            { t: 0.0, fn: () => { this.codecUI.mostrarEcraPreto(true); }},
+            { t: 0.8, fn: () => { this.codecUI.mostrarEcraPreto(false); }},
+            { t: 1.2, fn: () => { this._abrirTampa(1200); }},
             { t: 1.8, fn: () => {
                 this.jogador.grupo.visible = true;
                 this._subirJogador(posEsgoto, 1.5);
             }},
-            // Jogador avança um passo
-            { t: 3.2, fn: () => {
-                this._moverJogador(posAposSubir, 2.5);
-            }},
-            // Abre Codec
+            { t: 3.2, fn: () => { this._moverJogador(posAposSubir, 2.5); }},
             { t: 4.2, fn: () => {
                 this.codecUI.iniciarDialogos([
                     { falante: 'General',  texto: 'Viper, confirma situação. Conseguiste sair?' },
@@ -386,17 +329,17 @@ export class GestorCutscene {
             }},
         ];
 
-        this._duracao = 999; // termina via callback do codec
-        this._tempo = 0;
+        this._duracao    = 999;
+        this._tempo      = 0;
         this._passoAtual = 0;
-        this._ativa = true;
-        this._aMoverse = false;
+        this._ativa      = true;
+        this._aMoverse   = false;
     }
 
     _subirJogador(pos, duracao) {
-        const inicio = Date.now();
+        const inicio  = Date.now();
         const yInicio = -2;
-        const yFim = 0;
+        const yFim    = 0;
         const subir = () => {
             const t = Math.min((Date.now() - inicio) / (duracao * 1000), 1);
             const ease = t < 0.5 ? 2*t*t : -1+(4-2*t)*t;
@@ -410,7 +353,6 @@ export class GestorCutscene {
     _terminarEntrada() {
         this._ativa = false;
         if (this._onFimEntrada) this._onFimEntrada();
-        // Reativa a câmara do jogo
         this.camaraManager.cameraAtual.ativar();
     }
 
@@ -418,19 +360,16 @@ export class GestorCutscene {
     iniciarExtracao(onFim) {
         this._onFimExtracao = onFim;
 
-        // y:20.5 garante que a Viper está em cima do telhado e não dentro
         const posTelhado = new THREE.Vector3(-13, 20.5, 5);
         const posLanding = new THREE.Vector3(-13, 20.5, 2);
 
-        // ── Teleporta a Viper para o telhado imediatamente ──
         this.jogador.grupo.position.copy(posTelhado);
         this.jogador.grupo.visible = true;
 
-        // Reset da cabeça (pode estar inclinada de animações anteriores)
         const pc = this.jogador.partes.pivotCabeca;
         if (pc) pc.rotation.x = 0;
 
-        this._inclinacaoCabeca = 0; // controlada no atualizar(), sem rAF extra
+        this._inclinacaoCabeca = 0;
 
         this._keyframes = [
             { t: 0.0, pos: new THREE.Vector3(-5,  23,  14), alvo: posTelhado.clone() },
@@ -440,27 +379,16 @@ export class GestorCutscene {
         ];
 
         this._passos = [
-            // Jogador caminha para o centro do telhado
-            { t: 0.0, fn: () => {
-                this._moverJogador(posLanding, 3.0);
-            }},
-            // Som do helicóptero começa ao longe
-            { t: 1.5, fn: () => {
-                this._iniciarSomHelicoptero();
-            }},
-            // Começa a inclinar a cabeça para cima (flag — tratada no atualizar)
-            { t: 2.8, fn: () => {
-                this._inclinarCabeca = true;
-            }},
-            // Holofote aparece sobre a Viper
+            { t: 0.0, fn: () => { this._moverJogador(posLanding, 3.0); }},
+            { t: 1.5, fn: () => { this._iniciarSomHelicoptero(); }},
+            { t: 2.8, fn: () => { this._inclinarCabeca = true; }},
             { t: 3.5, fn: () => {
                 this._ativarHolofote(posLanding);
                 this._ativarVento();
             }},
-            // Codec — general confirma extração
             { t: 4.5, fn: () => {
                 this.codecUI.iniciarDialogos([
-                    { falante: 'General', texto: 'Viper, o Blackhawk está em aproximação. Trinta segundos.' },
+                    { falante: 'General', texto: 'Viper, o Blackhawk está em aproximação. Dez segundos.' },
                     { falante: 'Viper',   texto: '...' },
                     { falante: 'General', texto: 'Missão cumprida, Viper. Descansas quando chegares.' },
                     { falante: 'Viper',   texto: 'Só descansarei quando estiver morta.' },
@@ -469,13 +397,12 @@ export class GestorCutscene {
         ];
 
         this._inclinarCabeca = false;
-        this._duracao  = 999;
-        this._tempo    = 0;
+        this._duracao    = 999;
+        this._tempo      = 0;
         this._passoAtual = 0;
-        this._ativa    = true;
-        this._aMoverse = false;
+        this._ativa      = true;
+        this._aMoverse   = false;
 
-        // Desativa câmara do jogo
         this.camaraManager.cameraAtual.desativar();
     }
 
@@ -494,13 +421,12 @@ export class GestorCutscene {
         }, 1800);
     }
 
-    // ── Loop principal — chamar no render loop ──────────────
+    // ── Loop principal ──────────────────────────────────────
     atualizar(dt) {
         if (!this._ativa) return;
 
         this._tempo += dt;
 
-        // Executa passos agendados
         while (
             this._passoAtual < this._passos.length &&
             this._tempo >= this._passos[this._passoAtual].t
@@ -509,10 +435,9 @@ export class GestorCutscene {
             this._passoAtual++;
         }
 
-        // Anima câmara cinematográfica
         this._atualizarCamara(dt);
 
-        // Fade in do holofote (sem rAF separado)
+        // Fade do holofote
         if (this._holofote?.visible && this._holofote.intensity < this._holofoteIntensidadeAlvo) {
             this._holofote.intensity = Math.min(
                 this._holofote.intensity + dt * 400,
@@ -520,7 +445,7 @@ export class GestorCutscene {
             );
         }
 
-        // Inclinação da cabeça para cima (sem rAF separado)
+        // Inclinação da cabeça para cima
         if (this._inclinarCabeca) {
             const pc = this.jogador.partes.pivotCabeca;
             if (pc && pc.rotation.x > -0.5) {
@@ -528,8 +453,11 @@ export class GestorCutscene {
             }
         }
 
-        // Vento do helicóptero
+        // Fade do volume do helicóptero
+        this._atualizarSomHelicoptero(dt);
+
         this._atualizarVento(dt);
+
         if (this._aMoverse) {
             this._tickMovimento(dt);
             this.jogador.atualizar(true);
@@ -538,11 +466,8 @@ export class GestorCutscene {
         }
     }
 
-    // ── Trigger de extração — colocar no teu loop ──────────
-    // Retorna true se o jogador chegou ao telhado
     verificarTriggerExtracao() {
         const pos = this.jogador.posicao;
-        // Zona no telhado do edifício: x:-13 ±5, z:5 ±5, y≥19
         return (
             Math.abs(pos.x - (-13)) < 5 &&
             Math.abs(pos.z - 5)     < 5 &&
@@ -551,6 +476,7 @@ export class GestorCutscene {
     }
 
     destruir() {
+        this._pararSomHelicoptero();
         this.codecUI.destruir();
         if (this._holofote)   this.cena.remove(this._holofote);
         if (this._tampaGrupo) this.cena.remove(this._tampaGrupo);
